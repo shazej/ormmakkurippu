@@ -1,7 +1,22 @@
+# Node / logs
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.DS_Store
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Vite / builds
 dist/
 build/
-.env
-.DS_Store
-coverage/
 .vite/
+
+# Firebase Admin / credentials
+server/service-account.json
+**/service-account.json
+**/*firebase-adminsdk*.json
+**/*serviceAccount*.json

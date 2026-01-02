@@ -1,119 +1,50 @@
-# Ormmakkurippu (Call Task Logger)
+# ormmakurippu
 
-## PWA Support
-This application is configured as a Progressive Web App (PWA).
+Call Task Logger with Google Drive Integration and Firestore.
 
-### Testing PWA Locally
-To test the PWA features (installability, offline caching):
-1. Build the client:
-    ```bash
-    cd call-task-logger/client
-    npm run build
-    ```
-2. Preview the build:
-    ```bash
-    npm run preview
-    ```
-3. Open `http://localhost:4173` (or the port shown) in Chrome.
-4. Open DevTools -> Application tab.
-5. Verify "Manifest" and "Service Workers" sections.
-
-
-A production-ready application for logging and managing call-related tasks, built with React, Node.js, and SQLite.
-
-# shaz assistant
-
-## Development
+## Setup
 
 ### Prerequisites
-- Node.js installed
+1.  Node.js (v18+)
+2.  Firebase Project
+3.  Google Cloud Project (for Drive API)
 
-### Setup
-1. Install all dependencies:
-   ```bash
-   npm run install:all
-   ```
+### Service Account (Backend)
+1.  Go to Firebase Console -> Project Settings -> Service Accounts.
+2.  Generate a new private key.
+3.  Save the file as `service-account.json` in `server/`.
+    *   *Alternatively, export `GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json`*
 
+### Google OAuth (Frontend & Backend)
+1.  Go to Google Cloud Console -> APIs & Services -> Credentials.
+2.  Create OAuth 2.0 Client ID (Web Application).
+3.  Add Authorized URI: `http://localhost:5173` (Frontend).
+4.  Add Authorized Redirect URI: `http://localhost:5173` (or your production URL).
+5.  Copy Client ID and Client Secret.
 
-### Running the App
-Start both server and client (concurrently) in development mode:
+### Configuration
+1.  **Backend**: Create `server/.env` based on `server/.env.example`.
+    ```bash
+    GOOGLE_CLIENT_ID=...
+    GOOGLE_CLIENT_SECRET=...
+    GOOGLE_REDIRECT_URI=http://localhost:5173
+    ```
+2.  **Frontend**: Create `client/.env` (or set in local dev).
+    ```bash
+    VITE_GOOGLE_CLIENT_ID=...
+    ```
+
+### Installation
+```bash
+npm run install:all
+```
+
+### Running
 ```bash
 npm run dev
 ```
-
-### Production Deployment
-To run the application in production mode (server serving client files):
-1. Navigate to the project directory:
-   ```bash
-   cd call-task-logger
-   ```
-2. Build and Start:
-   ```bash
-   npm run build
-   npm run start
-   ```
-   *The server will serve the static client files on http://localhost:3001*
-
-
-### Directory Structure
-- `call-task-logger/server`: Backend API
-- `call-task-logger/client`: Frontend React App
 
 ## Features
-- **Task Management**: Create, read, update, and delete tasks.
-- **Filtering**: Filter by search text, category, priority, and status.
-- **CSV Export**: Export all tasks to CSV for external analysis.
-- **Validation**: Strict input validation with inline error messages.
-- **Responsive**: Mobile-friendly UI.
-
-## Prerequisites
-- Node.js (v18 or higher recommended)
-- npm (v9 or higher)
-
-## Getting Started
-
-### 1. Quick Start
-The easiest way to run the application is using the root-level scripts.
-
-```bash
-# Install all dependencies (root, server, and client)
-npm run install:all
-
-# Start both server and client concurrently
-npm run dev
-```
-*Server runs on http://localhost:3001, Client on http://localhost:5173*
-
-### 2. Manual Setup (Alternative)
-If you prefer to run them separately:
-**Backend**:
-```bash
-cd call-task-logger/server
-npm install
-node seed.js # Initialize database
-node index.js
-```
-
-**Frontend**:
-```bash
-cd call-task-logger/client
-npm install
-npm run dev
-```
-
-## Usage Guide
-- **Creating Tasks**: Click "New Task" in the top right. Fill in the required fields (Name, Description).
-- **Filtering**: Use the dropdowns or search bar to filter the list. Click "Reset" to clear filters.
-- **Editing**: Click the pencil icon on any task card.
-- **Deleting**: Click the trash icon (requires confirmation).
-- **Exporting**: Click "Export CSV" to download a full report of all tasks.
-
-## Troubleshooting
-- **Port Conflicts**: Ensure ports 3001 and 5173 are free.
-- **Database Errors**: If you encounter DB errors, try deleting `call-task-logger/server/tasks.db` and running `node seed.js` again.
-- **Network Issues**: Ensure the frontend proxy in `vite.config.js` matches the backend URL (`http://localhost:3001`).
-
-## Development
-- **Backend Tests**: Run `npm test` in the `server` directory.
-- **Linting**: Run `npm run lint` in the `client` directory.
-
+- **Task Management**: Create, edit, delete tasks. Saved to Firestore.
+- **Attachments**: Login with Google to upload files to "ormmakurippu" folder in your Drive.
+- **Export**: Export tasks to CSV.
