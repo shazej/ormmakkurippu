@@ -1,0 +1,30 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        working-directory: ios/CallTrackeriOS
+        run: xcodegen generate
+
+      - name: Build with xcodebuild
+        working-directory: ios/CallTrackeriOS
+        run: |
+          xcodebuild -scheme CallTrackeriOS \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            clean build
