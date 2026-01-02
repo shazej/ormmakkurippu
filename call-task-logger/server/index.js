@@ -29,8 +29,14 @@ db.serialize(() => {
     description TEXT NOT NULL,
     notes TEXT,
     status TEXT,
-    updatedAt INTEGER
+    updatedAt INTEGER,
+    deletedAt INTEGER DEFAULT NULL
   )`);
+
+  // Migration for existing tables
+  db.run("ALTER TABLE tasks ADD COLUMN deletedAt INTEGER DEFAULT NULL", (err) => {
+    // Ignore error if column already exists
+  });
 });
 
 // Validation Schemas
@@ -50,9 +56,15 @@ const updateTaskSchema = taskSchema.partial();
 
 // GET /api/tasks
 app.get('/api/tasks', (req, res) => {
-  const { search, status, category, priority, start, end } = req.query;
+  const { search, status, category, priority, start, end, includeDeleted } = req.query;
   let query = "SELECT * FROM tasks WHERE 1=1";
   const params = [];
+
+  if (includeDeleted === 'true') {
+    query += " AND deletedAt IS NOT NULL";
+  } else {
+    query += " AND deletedAt IS NULL";
+  }
 
   if (status) {
     query += " AND status = ?";
@@ -70,11 +82,6 @@ app.get('/api/tasks', (req, res) => {
     query += " AND (fromName LIKE ? OR description LIKE ? OR fromPhone LIKE ?)";
     const like = `%${search}%`;
     params.push(like, like, like);
-  }
-  // Optional date filter
-  if (start && end) {
-      // Assuming start/end are timestamps or we parse them. 
-      // For simplicity, skipping complex date math unless requested.
   }
 
   query += " ORDER BY createdAt DESC";
@@ -110,15 +117,15 @@ app.post('/api/tasks', (req, res) => {
     const data = taskSchema.parse(req.body);
     const id = uuidv4();
     const now = Date.now();
-    
+
     const stmt = db.prepare(`INSERT INTO tasks (
       id, createdAt, fromName, fromPhone, category, priority, description, notes, status, updatedAt
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
     stmt.run(
-      id, now, data.fromName, data.fromPhone || '', data.category, data.priority, 
+      id, now, data.fromName, data.fromPhone || '', data.category, data.priority,
       data.description, data.notes || '', data.status, now,
-      function(err) {
+      function (err) {
         if (err) {
           res.status(500).json({ error: err.message });
           return;
@@ -147,23 +154,23 @@ app.put('/api/tasks/:id', (req, res) => {
     // Construct dynamic update query
     const fields = [];
     const params = [];
-    
+
     Object.keys(data).forEach(key => {
-        fields.push(`${key} = ?`);
-        params.push(data[key]);
+      fields.push(`${key} = ?`);
+      params.push(data[key]);
     });
-    
+
     fields.push("updatedAt = ?");
     params.push(now);
     params.push(id);
 
     if (fields.length === 1) { // Only updatedAt
-        return res.status(400).json({ error: "No fields to update" });
+      return res.status(400).json({ error: "No fields to update" });
     }
 
     const query = `UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`;
 
-    db.run(query, params, function(err) {
+    db.run(query, params, function (err) {
       if (err) {
         res.status(500).json({ error: err.message });
         return;
@@ -173,17 +180,17 @@ app.put('/api/tasks/:id', (req, res) => {
         return;
       }
       // Return updated task
-       db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, row) => {
-            if(err) {
-                 res.json({ success: true, id }); // Fallback
-            } else {
-                res.json(row);
-            }
-       });
+      db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, row) => {
+        if (err) {
+          res.json({ success: true, id }); // Fallback
+        } else {
+          res.json(row);
+        }
+      });
     });
 
   } catch (err) {
-     if (err instanceof z.ZodError) {
+    if (err instanceof z.ZodError) {
       res.status(400).json({ error: err.errors });
     } else {
       res.status(500).json({ error: err.message });
@@ -193,53 +200,80 @@ app.put('/api/tasks/:id', (req, res) => {
 
 // DELETE /api/tasks/:id
 app.delete('/api/tasks/:id', (req, res) => {
-    const { id } = req.params;
-    db.run("DELETE FROM tasks WHERE id = ?", [id], function(err) {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-        if (this.changes === 0) {
-            res.status(404).json({ error: 'Task not found' });
-            return;
-        }
-        res.json({ message: 'Deleted successfully' });
-    });
+  const { id } = req.params;
+  const now = Date.now();
+  db.run("UPDATE tasks SET deletedAt = ? WHERE id = ?", [now, id], function (err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (this.changes === 0) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
+    res.json({ message: 'Moved to trash' });
+  });
+});
+
+// POST /api/tasks/:id/restore
+app.post('/api/tasks/:id/restore', (req, res) => {
+  const { id } = req.params;
+  db.run("UPDATE tasks SET deletedAt = NULL WHERE id = ?", [id], function (err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    if (this.changes === 0) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
+    res.json({ message: 'Restored successfully' });
+  });
 });
 
 // GET /api/export
 app.get('/api/export', (req, res) => {
-    const csvStringifier = createObjectCsvStringifier({
-        header: [
-            {id: 'createdAt', title: 'Created At'},
-            {id: 'fromName', title: 'From Name'},
-            {id: 'fromPhone', title: 'Phone'},
-            {id: 'category', title: 'Category'},
-            {id: 'priority', title: 'Priority'},
-            {id: 'status', title: 'Status'},
-            {id: 'description', title: 'Description'},
-            {id: 'notes', title: 'Notes'},
-        ]
-    });
+  const csvStringifier = createObjectCsvStringifier({
+    header: [
+      { id: 'createdAt', title: 'Created At' },
+      { id: 'fromName', title: 'From Name' },
+      { id: 'fromPhone', title: 'Phone' },
+      { id: 'category', title: 'Category' },
+      { id: 'priority', title: 'Priority' },
+      { id: 'status', title: 'Status' },
+      { id: 'description', title: 'Description' },
+      { id: 'notes', title: 'Notes' },
+    ]
+  });
 
-    db.all("SELECT * FROM tasks ORDER BY createdAt DESC", [], (err, rows) => {
-        if (err) {
-            res.status(500).send("Error exporting data");
-            return;
-        }
-        const formattedRows = rows.map(r => ({
-            ...r,
-            createdAt: new Date(r.createdAt).toLocaleString()
-        }));
-        
-        const header = csvStringifier.getHeaderString();
-        const records = csvStringifier.stringifyRecords(formattedRows);
-        
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="tasks.csv"');
-        res.send(header + records);
-    });
+  db.all("SELECT * FROM tasks ORDER BY createdAt DESC", [], (err, rows) => {
+    if (err) {
+      res.status(500).send("Error exporting data");
+      return;
+    }
+    const formattedRows = rows.map(r => ({
+      ...r,
+      createdAt: new Date(r.createdAt).toLocaleString()
+    }));
+
+    const header = csvStringifier.getHeaderString();
+    const records = csvStringifier.stringifyRecords(formattedRows);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="tasks.csv"');
+    res.send(header + records);
+  });
 });
+
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '../client/dist');
+  app.use(express.static(clientBuildPath));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
