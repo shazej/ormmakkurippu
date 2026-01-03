@@ -3,14 +3,13 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
 import axios from 'axios'
 import { templates } from './templates'
 import TaskDetailsPage from './pages/TaskDetailsPage'
-import templates from './templates' // 1. Import templates
+import TaskForm from './components/TaskForm'
+import { useAuth } from './context/AuthContext'
 
 function HomePage() {
+    const { user, login, logout } = useAuth();
     const [tasks, setTasks] = useState([])
-    const [title, setTitle] = useState('')
-    const [description, setDescription] = useState('')
-    const [category, setCategory] = useState('') // 2. Add category state
-    const [priority, setPriority] = useState('Low') // 2. Add priority state
+    const [formInitialData, setFormInitialData] = useState(null)
 
     useEffect(() => {
         fetchTasks()
@@ -25,41 +24,67 @@ function HomePage() {
         }
     }
 
-    // 3. Add handleTemplateClick function
     const handleTemplateClick = (template) => {
-        setCategory(template.category)
-        setDescription(template.description)
-        setPriority(template.priority)
+        setFormInitialData({
+            category: template.category,
+            description: template.description,
+            priority: template.priority,
+            // Reset others if needed or keep existing not straightforward with this pattern, 
+            // but TaskForm useEffect handles spread.
+        });
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        if (!title) return
-
-        // 6. Update handleSubmit to append category and priority to description
-        const fullDescription = `${description}\n\nCategory: ${category}\nPriority: ${priority}`.trim()
+    const handleSubmit = async (formData) => {
+        // Append Category/Priority to description if needed? 
+        // The original code did that because there were no separate fields in the backend/form for them?
+        // Wait, the original code DID have separate inputs but appended them to description logic:
+        // "const fullDescription = `${description}\n\nCategory: ${category}\nPriority: ${priority}`.trim()"
+        // BUT the backend now HAS separate fields (category, priority).
+        // I updated the backend schema/migrations (well, sqlite schema was there, Firestore is dynamic).
+        // So I should send them as separate fields.
+        // TaskForm sends them as separate fields in formData.
 
         try {
-            await axios.post('/api/tasks', { title, description: fullDescription })
-            setTitle('')
-            setDescription('')
-            setCategory('')
-            setPriority('Low')
+            await axios.post('/api/tasks', formData)
+            setFormInitialData(null) // Reset form via initialData? No, TaskForm handles reset? 
+            // TaskForm doesn't auto-reset on submit unless we tell it. 
+            // Ideally TaskForm should handle its own reset or we force remount.
+            // For now, assume success.
             fetchTasks()
+            window.location.reload(); // Simple clear for now or simple re-fetch
         } catch (error) {
             console.error('Error creating task:', error)
+            alert('Error creating task');
         }
     }
 
     return (
         <div className="max-w-2xl mx-auto">
-            <header className="mb-8">
-                <h1 className="text-3xl font-bold text-blue-600">ormmakurippu</h1>
-                <p className="text-gray-600">Call Task Logger</p>
+            <header className="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold text-blue-600">ormmakurippu</h1>
+                    <p className="text-gray-600">Call Task Logger</p>
+                </div>
+                <div>
+                    {user ? (
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-gray-700">Hi, {user.name}</span>
+                            <button onClick={logout} className="text-sm text-red-600 hover:text-red-800">Logout</button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => login()}
+                            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 text-sm font-medium flex items-center gap-2"
+                        >
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" className="w-4 h-4" />
+                            Sign in with Google
+                        </button>
+                    )}
+                </div>
             </header>
 
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm mb-8 border border-gray-100">
-                {/* 4. Render template buttons above the form fields */}
+            <div className="mb-8">
+                {/* Templates */}
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Quick Templates</label>
                     <div className="flex flex-wrap gap-2">
@@ -76,65 +101,12 @@ function HomePage() {
                     </div>
                 </div>
 
-                <div className="mb-4">
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Task Title</label>
-                    <input
-                        type="text"
-                        id="title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter task title"
-                        required
-                    />
-                </div>
-
-                {/* 5. Add inputs for Category and Priority */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                        <input
-                            type="text"
-                            id="category"
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="General"
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                        <select
-                            id="priority"
-                            value={priority}
-                            onChange={(e) => setPriority(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="mb-4">
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea
-                        id="description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter task description"
-                        rows="3"
-                    />
-                </div>
-                <button
-                    type="submit"
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200"
-                >
-                    Add Task
-                </button>
-            </form>
+                <TaskForm
+                    initialData={formInitialData}
+                    onSubmit={handleSubmit}
+                    buttonText="Add Task"
+                />
+            </div>
 
             <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-gray-800">Recent Tasks</h2>
@@ -145,7 +117,7 @@ function HomePage() {
                         <Link key={task.id} to={`/tasks/${task.id}`} className="block">
                             <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition">
                                 <div className="flex justify-between items-start">
-                                    <h3 className="font-semibold text-lg text-gray-900">{task.title}</h3>
+                                    <h3 className="font-semibold text-lg text-gray-900">{task.title || task.description?.substring(0, 30) || 'Untitled'}</h3>
                                     <span className={`px-2 py-1 text-xs rounded-full ${task.status === 'Completed' ? 'bg-green-100 text-green-800' :
                                         task.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
                                             task.status === 'Cancelled' ? 'bg-gray-100 text-gray-800' :
@@ -159,8 +131,16 @@ function HomePage() {
                                     {task.category && <span>• {task.category}</span>}
                                 </div>
                                 {task.description && <p className="text-gray-600 mt-2 line-clamp-2">{task.description}</p>}
+
+                                {task.attachments && task.attachments.length > 0 && (
+                                    <div className="mt-3 flex items-center gap-1 text-xs text-blue-600">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                                        {task.attachments.length} Attachment(s)
+                                    </div>
+                                )}
+
                                 <div className="text-xs text-gray-400 mt-3">
-                                    {new Date(task.created_at).toLocaleString()}
+                                    {new Date(task.createdAt || task.created_at || Date.now()).toLocaleString()}
                                 </div>
                             </div>
                         </Link>

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
+import AttachmentUpload from './AttachmentUpload';
+import { useAuth } from '../context/AuthContext';
 
 function TaskForm({ initialData = {}, onSubmit, buttonText = "Save" }) {
+    const { token } = useAuth();
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -9,7 +12,8 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save" }) {
         category: 'General',
         priority: 'Medium',
         status: 'Pending',
-        notes: ''
+        notes: '',
+        attachments: []
     });
 
     useEffect(() => {
@@ -21,6 +25,24 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save" }) {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleUploadSuccess = (fileData) => {
+        setFormData(prev => ({
+            ...prev,
+            attachments: [...(prev.attachments || []), {
+                ...fileData,
+                provider: 'gdrive',
+                createdAt: Date.now()
+            }]
+        }));
+    };
+
+    const removeAttachment = (indexToRemove) => {
+        setFormData(prev => ({
+            ...prev,
+            attachments: prev.attachments.filter((_, index) => index !== indexToRemove)
+        }));
     };
 
     const handleSubmit = (e) => {
@@ -130,6 +152,37 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save" }) {
                     rows="2"
                     placeholder="Internal notes..."
                 />
+            </div>
+
+            {/* Attachments Section */}
+            <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Attachments</h4>
+
+                {formData.attachments && formData.attachments.length > 0 && (
+                    <ul className="space-y-2 mb-4">
+                        {formData.attachments.map((file, index) => (
+                            <li key={file.fileId || index} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
+                                <a
+                                    href={file.webViewLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline truncate max-w-xs"
+                                >
+                                    {file.name}
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => removeAttachment(index)}
+                                    className="text-red-500 hover:text-red-700 ml-2 text-xs"
+                                >
+                                    Remove
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                <AttachmentUpload onUploadSuccess={handleUploadSuccess} idToken={token} />
             </div>
 
             <button

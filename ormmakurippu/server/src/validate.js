@@ -2,13 +2,23 @@ import { z } from 'zod';
 import { Categories, Priorities, Statuses } from './schema.js';
 
 export const taskSchema = z.object({
-    fromName: z.string().min(1, "From Name is required"),
+    title: z.string().min(1, "Title is required"),
+    fromName: z.string().optional().nullable(),
     fromPhone: z.string().optional().nullable(),
-    category: z.nativeEnum(Categories).default(Categories.OTHER),
+    category: z.nativeEnum(Categories).default(Categories.GENERAL),
     priority: z.nativeEnum(Priorities).default(Priorities.MEDIUM),
-    description: z.string().min(1, "Description is required"),
+    description: z.string().optional().nullable(), // Description can be optional if title is there
     notes: z.string().optional().nullable(),
-    status: z.nativeEnum(Statuses).default(Statuses.NEW),
+    status: z.nativeEnum(Statuses).default(Statuses.PENDING),
+    attachments: z.array(z.object({
+        provider: z.string(),
+        fileId: z.string(),
+        name: z.string(),
+        mimeType: z.string(),
+        size: z.union([z.number(), z.string()]).optional(),
+        webViewLink: z.string().optional(),
+        createdAt: z.union([z.number(), z.string()]).optional()
+    })).optional().default([]),
 });
 
 export const validate = (schema) => (req, res, next) => {

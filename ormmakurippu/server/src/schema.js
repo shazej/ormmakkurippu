@@ -1,7 +1,8 @@
 export const Categories = {
-    COMPUTER: 'Computer',
-    CAR: 'Car',
-    HOME: 'Home',
+    GENERAL: 'General',
+    PERSONAL: 'Personal',
+    WORK: 'Work',
+    URGENT: 'Urgent',
     OTHER: 'Other'
 };
 
@@ -12,7 +13,8 @@ export const Priorities = {
 };
 
 export const Statuses = {
-    NEW: 'New',
+    PENDING: 'Pending',
     IN_PROGRESS: 'In Progress',
-    DONE: 'Done'
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled'
 };

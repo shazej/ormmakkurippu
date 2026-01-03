@@ -77,8 +77,8 @@ function TaskDetailsPage() {
                 />
 
                 <div className="mt-8 bg-white p-4 rounded-lg shadow-sm border border-gray-100 text-sm text-gray-500">
-                    <p>Created At: {new Date(task.created_at).toLocaleString()}</p>
-                    {task.updated_at && <p>Last Updated: {new Date(task.updated_at).toLocaleString()}</p>}
+                    <p>Created At: {new Date(task.createdAt || task.created_at).toLocaleString()}</p>
+                    {(task.updatedAt || task.updated_at) && <p>Last Updated: {new Date(task.updatedAt || task.updated_at).toLocaleString()}</p>}
                 </div>
             </div>
         </div>

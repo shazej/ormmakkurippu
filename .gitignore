@@ -14,6 +14,7 @@ pnpm-debug.log*
 dist/
 build/
 .vite/
+<<<<<<< HEAD
 
 # Firebase Admin / credentials
 server/service-account.json
@@ -43,3 +44,8 @@ local.properties
 !*.xcworkspace/contents.xcworkspacedata
 DerivedData
 .DS_Store
+=======
+# Firebase Admin SDK key (DO NOT COMMIT)
+server/service-account.json
+service-account.json
+>>>>>>> 9cd5841 (updated android build)

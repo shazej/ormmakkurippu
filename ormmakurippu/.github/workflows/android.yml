@@ -1,0 +1,32 @@
+name: Android Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build Android App
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x android/CallTrackerAndroid/gradlew
+
+    - name: Build with Gradle
+      working-directory: android/CallTrackerAndroid
+      # Note: This might fail if google-services.json is missing. 
+      # In a real CI, you'd decode a secret to create that file.
+      # For now, we run assembleDebug which is often permissive.
+      run: ./gradlew assembleDebug test

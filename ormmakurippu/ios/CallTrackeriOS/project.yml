@@ -1,0 +1,69 @@
+name: CallTrackeriOS
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: 16.0
+  xcodeVersion: 15.0
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    majorVersion: 10
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    majorVersion: 7
+
+targets:
+  CallTrackeriOS:
+    type: application
+    platform: iOS
+    sources:
+      # Source Code
+      - path: CallTrackeriOS
+        excludes:
+          - Info.plist
+          - GoogleService-Info.plist
+          - Assets.xcassets
+
+      # Resources
+      - path: CallTrackeriOS/Assets.xcassets
+      - path: CallTrackeriOS/GoogleService-Info.plist
+        optional: true
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.CallTrackeriOS
+        INFOPLIST_FILE: CallTrackeriOS/Info.plist
+        MARKETING_VERSION: 1.0
+        CURRENT_PROJECT_VERSION: 1
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseStorage
+      - package: Firebase
+        product: FirebaseCrashlytics
+      - package: Firebase
+        product: FirebaseAnalytics
+      - package: GoogleSignIn
+        product: GoogleSignIn
+
+schemes:
+  CallTrackeriOS:
+    build:
+      targets:
+        CallTrackeriOS: all
+    run:
+      config: Debug
+    test:
+      targets: []
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
