@@ -3,6 +3,7 @@ package com.example.calltracker.data.repository
 import android.net.Uri
 import com.example.calltracker.data.local.CallDao
 import com.example.calltracker.data.model.CallEntity
+import com.example.calltracker.data.service.AnalysisResult
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -28,4 +29,8 @@ class MockCallRepositoryImpl @Inject constructor(
     }
 
     override fun getCurrentUserUid(): String? = "mock_user_uid"
+
+    override suspend fun analyzeNotes(notes: String): AnalysisResult {
+        return AnalysisResult(summary = "Mock AI Summary", nextAction = "Mock Action")
+    }
 }

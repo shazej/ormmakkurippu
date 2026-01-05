@@ -29,12 +29,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.calltracker.viewmodel.CallViewModel
-
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
+import com.example.calltracker.viewmodel.CallViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,9 +121,9 @@ fun CreateCallScreen(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("AI Suggestion:", style = MaterialTheme.typography.labelLarge)
-                        Text("Summary: ${result.summary}", style = MaterialTheme.typography.bodySmall)
+                        Text(text = "Summary: ${result.summary}", style = MaterialTheme.typography.bodySmall)
                         if (!result.assignee.isNullOrBlank()) {
-                            Text("Assignee: ${result.assignee}", style = MaterialTheme.typography.bodySmall)
+                            Text(text = "Assignee: ${result.assignee}", style = MaterialTheme.typography.bodySmall)
                         }
                         Button(
                             onClick = {

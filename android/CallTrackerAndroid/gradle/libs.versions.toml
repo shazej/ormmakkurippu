@@ -35,6 +35,7 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
@@ -50,8 +51,8 @@ google-ai-generativeai = { group = "com.google.ai.client.generativeai", name = "
 
 # Google Drive & Calendar API
 google-api-client-android = { group = "com.google.api-client", name = "google-api-client-android", version.ref = "googleApiClient" }
-google-api-services-drive = { group = "com.google.apis", name = "google-api-services-drive", version = "v3-rev20230822-2.0.0" }
-google-api-services-calendar = { group = "com.google.apis", name = "google-api-services-calendar", version = "v3-rev20230822-2.0.0" }
+google-api-services-drive = { group = "com.google.apis", name = "google-api-services-drive", version = "v3-rev20251210-2.0.0" }
+google-api-services-calendar = { group = "com.google.apis", name = "google-api-services-calendar", version = "v3-rev20251207-2.0.0" }
 google-http-client-gson = { group = "com.google.http-client", name = "google-http-client-gson", version = "1.43.3" }
 
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
