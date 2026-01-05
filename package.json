@@ -3,10 +3,10 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "install:server": "cd call-task-logger/server && npm install",
+        "install:server": "cd server && npm install",
         "install:client": "cd call-task-logger/client && npm install",
         "install:all": "npm install && npm run install:server && npm run install:client",
-        "dev:server": "cd call-task-logger/server && npm start",
+        "dev:server": "cd server && npm start",
         "dev:client": "cd call-task-logger/client && npm run dev",
         "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
     },

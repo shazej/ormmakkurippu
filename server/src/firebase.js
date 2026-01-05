@@ -23,11 +23,22 @@ if (!getApps().length) {
         }
     } else {
         console.log('No service-account.json found, using default credentials');
-        app = initializeApp();
+        app = initializeApp({
+            projectId: process.env.GOOGLE_PROJECT_ID || process.env.PROJECT_ID
+        });
     }
 } else {
     app = getApps()[0];
 }
 
-export const db = getFirestore(app);
+import { LocalDb } from './local-db.js';
+
+export const db = (!process.env.GOOGLE_PROJECT_ID && !process.env.PROJECT_ID && !fs.existsSync(serviceAccountPath))
+    ? new LocalDb()
+    : getFirestore(app);
+
+if ((!process.env.GOOGLE_PROJECT_ID && !process.env.PROJECT_ID && !fs.existsSync(serviceAccountPath))) {
+    console.warn('⚠️  WARNING: Using Local JSON Database Mode (data/tasks.json)');
+}
+
 export const auth = getAuth(app);
