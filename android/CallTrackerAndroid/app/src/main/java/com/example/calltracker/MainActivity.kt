@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
                      // Pass padding if needed or just handle in screens.
                      // NavHost handles its own spacing usually, but Good practice to box it.
                      Box(modifier = Modifier.padding(innerPadding)) {
-                         com.example.calltracker.ui.navigation.CallTrackerNavHost()
+                         com.example.calltracker.CallTrackerNavHost()
                      }
                 }
             }

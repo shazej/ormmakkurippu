@@ -5,10 +5,13 @@ import androidx.room.Room
 import com.example.calltracker.data.local.CallDao
 import com.example.calltracker.data.local.CallDatabase
 import com.example.calltracker.data.repository.CallRepository
-import com.example.calltracker.data.repository.CallRepositoryImpl
+import com.example.calltracker.data.repository.MockCallRepositoryImpl
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.example.calltracker.data.repository.CallRepositoryImpl
+import com.example.calltracker.data.service.GoogleApiService
+import com.example.calltracker.data.service.GeminiAssistant
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -59,9 +62,11 @@ object AppModule {
     fun provideCallRepository(
         dao: CallDao,
         firestore: FirebaseFirestore,
-        auth: FirebaseAuth, 
-        storage: FirebaseStorage
+        auth: FirebaseAuth,
+        storage: FirebaseStorage,
+        googleApiService: GoogleApiService,
+        geminiAssistant: GeminiAssistant
     ): CallRepository {
-        return CallRepositoryImpl(dao, firestore, auth, storage)
+        return CallRepositoryImpl(dao, firestore, auth, storage, googleApiService, geminiAssistant)
     }
 }

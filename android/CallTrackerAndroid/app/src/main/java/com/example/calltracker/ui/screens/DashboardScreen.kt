@@ -1,6 +1,7 @@
 package com.example.calltracker.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,7 +72,7 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Welcome, ${user?.displayName ?: user?.email ?: "User"}",
+                text = "Welcome, User", // Stubbed
                 style = MaterialTheme.typography.titleMedium
             )
 

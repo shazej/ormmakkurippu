@@ -47,3 +47,8 @@ DerivedData
 # Firebase Client Config (Secrets)
 **/google-services.json
 **/GoogleService-Info.plist
+
+# Android Development Artifacts
+android/CallTrackerAndroid/*.log
+android/CallTrackerAndroid/*.png
+android/CallTrackerAndroid/*.mp4

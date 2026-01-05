@@ -17,6 +17,8 @@ navigationCompose = "2.7.7"
 coroutines = "1.8.0"
 playServicesAuth = "21.0.0"
 crashlyticsPlugin = "2.9.9"
+googleAi = "0.7.0"
+googleApiClient = "2.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +44,15 @@ firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+
+# Gemini AI
+google-ai-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "googleAi" }
+
+# Google Drive & Calendar API
+google-api-client-android = { group = "com.google.api-client", name = "google-api-client-android", version.ref = "googleApiClient" }
+google-api-services-drive = { group = "com.google.apis", name = "google-api-services-drive", version = "v3-rev20230822-2.0.0" }
+google-api-services-calendar = { group = "com.google.apis", name = "google-api-services-calendar", version = "v3-rev20230822-2.0.0" }
+google-http-client-gson = { group = "com.google.http-client", name = "google-http-client-gson", version = "1.43.3" }
 
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }

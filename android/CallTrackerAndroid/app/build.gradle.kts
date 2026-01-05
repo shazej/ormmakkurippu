@@ -1,9 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-    alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.google.dagger.hilt.android)
-    alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.ksp)
 }
 
@@ -94,4 +92,13 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Gemini AI
+    implementation(libs.google.ai.generativeai)
+
+    // Google Workspace APIs
+    implementation(libs.google.api.client.android)
+    implementation(libs.google.api.services.drive)
+    implementation(libs.google.api.services.calendar)
+    implementation(libs.google.http.client.gson)
 }

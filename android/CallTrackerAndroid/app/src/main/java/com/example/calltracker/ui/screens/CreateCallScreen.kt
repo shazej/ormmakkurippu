@@ -31,6 +31,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.calltracker.viewmodel.CallViewModel
 
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.collectAsState
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateCallScreen(
@@ -43,6 +48,7 @@ fun CreateCallScreen(
     var notes by remember { mutableStateOf("") }
     var attachmentUri by remember { mutableStateOf<Uri?>(null) }
     
+    val analysisResult by viewModel.analysisResult.collectAsState()
     val context = LocalContext.current
     
     val launcher = rememberLauncherForActivityResult(
@@ -99,8 +105,38 @@ fun CreateCallScreen(
                 onValueChange = { notes = it },
                 label = { Text("Notes") },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 3
+                minLines = 3,
+                trailingIcon = {
+                    IconButton(onClick = { viewModel.analyzeNotes(notes) }) {
+                        Icon(Icons.Default.AutoAwesome, "AI Suggest")
+                    }
+                }
             )
+
+            analysisResult?.let { result ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("AI Suggestion:", style = MaterialTheme.typography.labelLarge)
+                        Text("Summary: ${result.summary}", style = MaterialTheme.typography.bodySmall)
+                        if (!result.assignee.isNullOrBlank()) {
+                            Text("Assignee: ${result.assignee}", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Button(
+                            onClick = {
+                                if (result.summary.isNotBlank()) name = result.summary
+                                if (!result.assignee.isNullOrBlank()) assignee = result.assignee
+                                viewModel.clearAnalysis()
+                            },
+                            modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                            Text("Apply Suggestion")
+                        }
+                    }
+                }
+            }
             
             OutlinedButton(
                 onClick = { launcher.launch("image/*") },

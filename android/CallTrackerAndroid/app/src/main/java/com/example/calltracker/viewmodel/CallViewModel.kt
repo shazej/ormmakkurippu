@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.calltracker.data.service.AnalysisResult
 import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
@@ -97,5 +98,19 @@ class CallViewModel @Inject constructor(
 
     suspend fun getCallById(id: String): CallEntity? {
         return repository.getCallById(id)
+    }
+
+    // AI Features
+    private val _analysisResult = MutableStateFlow<AnalysisResult?>(null)
+    val analysisResult = _analysisResult.asStateFlow()
+
+    fun analyzeNotes(notes: String) {
+        viewModelScope.launch {
+            _analysisResult.value = repository.analyzeNotes(notes)
+        }
+    }
+
+    fun clearAnalysis() {
+        _analysisResult.value = null
     }
 }
