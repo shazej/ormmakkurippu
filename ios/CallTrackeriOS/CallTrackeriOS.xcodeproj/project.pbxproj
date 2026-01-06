@@ -1,0 +1,524 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1300F85C912F4B353B9107A5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AD1B82D74C3C1EF57A9ECE0 /* ContentView.swift */; };
+		16B626931252F739759DCA25 /* FirebaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BC191395ED3108CE06C82C1 /* FirebaseService.swift */; };
+		2B378AA1F4013C8736F8AD83 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 397AB0262CD0A7CABB664C74 /* GoogleSignIn */; };
+		3534153B165FA1B5BF604EB0 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E2D2F2CBB20072BF3B8D4D5F /* GoogleService-Info.plist */; };
+		77330EE63B191833CAA88A0C /* ViewHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5286E26780965E0F9971CC45 /* ViewHelper.swift */; };
+		77BD6A14903E79A15679C1D5 /* Call.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAB7E8E6F6581C1462CD5FA /* Call.swift */; };
+		7B5551F82B720DF2A5247298 /* FirebaseFirestoreSwift in Frameworks */ = {isa = PBXBuildFile; productRef = FBFDDD944CCA0E8BE1E3D18D /* FirebaseFirestoreSwift */; };
+		7C1E7BBBDC1DBD2536D94187 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19543DA63DB8383721ECCE69 /* LoginView.swift */; };
+		7E4DB8820DD2675AC3B2C931 /* DateExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 713744F9971C787F0377198A /* DateExtension.swift */; };
+		9269482F79A4ABD2E0EAA3D3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 10FBBFD55CB621D6568B16BC /* FirebaseFirestore */; };
+		99A765A804D43977476627E7 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D90EE01A57581EBF02C3380 /* DashboardView.swift */; };
+		A5C8CC3EF21A59E0273F7A1B /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 096E5996B185111F9BB839CF /* FirebaseCrashlytics */; };
+		AB57DA8FC5E11BE4E51D37D4 /* ColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5CE53AFA7B00465CF2893A /* ColorExtension.swift */; };
+		B1ADF70DD1C2ABD50B82FCB4 /* CallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31DC8F5B1FFE8E81F1459D81 /* CallViewModel.swift */; };
+		B810E6D825E4BC4E50F62D27 /* CreateCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B51AAE208A1852E0D68E510 /* CreateCallView.swift */; };
+		BEE7FB2B1BC38673464DFC05 /* CallDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 320DEC37EB0F7352ACC80CB8 /* CallDetailView.swift */; };
+		C9A925A51229647362DE43EE /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 14AFBAA632F13B951F413B6C /* FirebaseAnalytics */; };
+		CD40E5C0939500915DB6301C /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82086E87AAA86F9BBA12B609 /* Persistence.swift */; };
+		D45F5F2FE54D32680FD4B4C4 /* CallTrackeriOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF8DBCB75484DA2CC67C2CC9 /* CallTrackeriOSApp.swift */; };
+		D47B0428BAF6B173DA2F7B6A /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CA96F35D9463C341DDEB2E8 /* AuthViewModel.swift */; };
+		DEF29BED7CE61701FB8C3A58 /* CallListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFF98AE1AD4EFE9AC7030FF /* CallListView.swift */; };
+		E10C2EC73EE2E7D6689C25DD /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = CE253E10EA9CD8AAFA12688F /* FirebaseAuth */; };
+		E1566C66B6338C00FF9855EB /* CallTrackerModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = EC0DD359AF1443E922F9D585 /* CallTrackerModel.xcdatamodeld */; };
+		FA2E4AECBE73A0F76CB9C685 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 9709AA627D54A21258D3D1AE /* FirebaseStorage */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0BC191395ED3108CE06C82C1 /* FirebaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseService.swift; sourceTree = "<group>"; };
+		0D5CE53AFA7B00465CF2893A /* ColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtension.swift; sourceTree = "<group>"; };
+		19543DA63DB8383721ECCE69 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		31DC8F5B1FFE8E81F1459D81 /* CallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallViewModel.swift; sourceTree = "<group>"; };
+		320DEC37EB0F7352ACC80CB8 /* CallDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallDetailView.swift; sourceTree = "<group>"; };
+		3D90EE01A57581EBF02C3380 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		4AD1B82D74C3C1EF57A9ECE0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		4CA96F35D9463C341DDEB2E8 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		5286E26780965E0F9971CC45 /* ViewHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewHelper.swift; sourceTree = "<group>"; };
+		713744F9971C787F0377198A /* DateExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateExtension.swift; sourceTree = "<group>"; };
+		7B51AAE208A1852E0D68E510 /* CreateCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateCallView.swift; sourceTree = "<group>"; };
+		82086E87AAA86F9BBA12B609 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
+		8EFF98AE1AD4EFE9AC7030FF /* CallListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallListView.swift; sourceTree = "<group>"; };
+		9CAB7E8E6F6581C1462CD5FA /* Call.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Call.swift; sourceTree = "<group>"; };
+		ACE6140AE3220F3F6C2DF389 /* CallTrackeriOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CallTrackeriOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BF8DBCB75484DA2CC67C2CC9 /* CallTrackeriOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallTrackeriOSApp.swift; sourceTree = "<group>"; };
+		DF880F48E820BFE8558D7006 /* CallTrackerModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = CallTrackerModel.xcdatamodel; sourceTree = "<group>"; };
+		E2D2F2CBB20072BF3B8D4D5F /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8ADF606DA57BAB8049674F46 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E10C2EC73EE2E7D6689C25DD /* FirebaseAuth in Frameworks */,
+				9269482F79A4ABD2E0EAA3D3 /* FirebaseFirestore in Frameworks */,
+				7B5551F82B720DF2A5247298 /* FirebaseFirestoreSwift in Frameworks */,
+				FA2E4AECBE73A0F76CB9C685 /* FirebaseStorage in Frameworks */,
+				A5C8CC3EF21A59E0273F7A1B /* FirebaseCrashlytics in Frameworks */,
+				C9A925A51229647362DE43EE /* FirebaseAnalytics in Frameworks */,
+				2B378AA1F4013C8736F8AD83 /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3ACD91EE1C2EB8F3558269CD /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				0BC191395ED3108CE06C82C1 /* FirebaseService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		4E08945801E2EBB68AA90CED /* App */ = {
+			isa = PBXGroup;
+			children = (
+				BF8DBCB75484DA2CC67C2CC9 /* CallTrackeriOSApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		5609CE4E18784484B760F2AC /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				4CA96F35D9463C341DDEB2E8 /* AuthViewModel.swift */,
+				31DC8F5B1FFE8E81F1459D81 /* CallViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		61A87C09A5B7AC0DBC3C294A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				320DEC37EB0F7352ACC80CB8 /* CallDetailView.swift */,
+				8EFF98AE1AD4EFE9AC7030FF /* CallListView.swift */,
+				4AD1B82D74C3C1EF57A9ECE0 /* ContentView.swift */,
+				7B51AAE208A1852E0D68E510 /* CreateCallView.swift */,
+				3D90EE01A57581EBF02C3380 /* DashboardView.swift */,
+				19543DA63DB8383721ECCE69 /* LoginView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		77E36EC01A42CBF0E0E77DAC /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				0D5CE53AFA7B00465CF2893A /* ColorExtension.swift */,
+				713744F9971C787F0377198A /* DateExtension.swift */,
+				5286E26780965E0F9971CC45 /* ViewHelper.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		903080E6EC93F50F77C08739 = {
+			isa = PBXGroup;
+			children = (
+				E6EB92291FBA02CD192B0C68 /* CallTrackeriOS */,
+				F4187B76920A384966C2A622 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B1E5DBF1640466B1DD51A7FC /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				9CAB7E8E6F6581C1462CD5FA /* Call.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		C41A632282CB8075B02E4906 /* CallTrackeriOS */ = {
+			isa = PBXGroup;
+			children = (
+				E2D2F2CBB20072BF3B8D4D5F /* GoogleService-Info.plist */,
+			);
+			path = CallTrackeriOS;
+			sourceTree = "<group>";
+		};
+		E6EB92291FBA02CD192B0C68 /* CallTrackeriOS */ = {
+			isa = PBXGroup;
+			children = (
+				EC0DD359AF1443E922F9D585 /* CallTrackerModel.xcdatamodeld */,
+				82086E87AAA86F9BBA12B609 /* Persistence.swift */,
+				4E08945801E2EBB68AA90CED /* App */,
+				C41A632282CB8075B02E4906 /* CallTrackeriOS */,
+				B1E5DBF1640466B1DD51A7FC /* Models */,
+				3ACD91EE1C2EB8F3558269CD /* Services */,
+				77E36EC01A42CBF0E0E77DAC /* Utils */,
+				5609CE4E18784484B760F2AC /* ViewModels */,
+				61A87C09A5B7AC0DBC3C294A /* Views */,
+			);
+			path = CallTrackeriOS;
+			sourceTree = "<group>";
+		};
+		F4187B76920A384966C2A622 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ACE6140AE3220F3F6C2DF389 /* CallTrackeriOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		ECE29D686336785996637790 /* CallTrackeriOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B422AFB9D785FD320B8E1849 /* Build configuration list for PBXNativeTarget "CallTrackeriOS" */;
+			buildPhases = (
+				0C991FA40933685FA79EAD80 /* Sources */,
+				BCF6D72BBA76E8C212F62851 /* Resources */,
+				8ADF606DA57BAB8049674F46 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CallTrackeriOS;
+			packageProductDependencies = (
+				CE253E10EA9CD8AAFA12688F /* FirebaseAuth */,
+				10FBBFD55CB621D6568B16BC /* FirebaseFirestore */,
+				FBFDDD944CCA0E8BE1E3D18D /* FirebaseFirestoreSwift */,
+				9709AA627D54A21258D3D1AE /* FirebaseStorage */,
+				096E5996B185111F9BB839CF /* FirebaseCrashlytics */,
+				14AFBAA632F13B951F413B6C /* FirebaseAnalytics */,
+				397AB0262CD0A7CABB664C74 /* GoogleSignIn */,
+			);
+			productName = CallTrackeriOS;
+			productReference = ACE6140AE3220F3F6C2DF389 /* CallTrackeriOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9BEBE9D0F4F7F40848A46601 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = 9C12FF143E801E6619D6D43B /* Build configuration list for PBXProject "CallTrackeriOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 903080E6EC93F50F77C08739;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CC2FAA12318476EF4F91B2B6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				4E4F2FC2DBEE590F756AC3B3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ECE29D686336785996637790 /* CallTrackeriOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BCF6D72BBA76E8C212F62851 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3534153B165FA1B5BF604EB0 /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0C991FA40933685FA79EAD80 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D47B0428BAF6B173DA2F7B6A /* AuthViewModel.swift in Sources */,
+				77BD6A14903E79A15679C1D5 /* Call.swift in Sources */,
+				BEE7FB2B1BC38673464DFC05 /* CallDetailView.swift in Sources */,
+				DEF29BED7CE61701FB8C3A58 /* CallListView.swift in Sources */,
+				E1566C66B6338C00FF9855EB /* CallTrackerModel.xcdatamodeld in Sources */,
+				D45F5F2FE54D32680FD4B4C4 /* CallTrackeriOSApp.swift in Sources */,
+				B1ADF70DD1C2ABD50B82FCB4 /* CallViewModel.swift in Sources */,
+				AB57DA8FC5E11BE4E51D37D4 /* ColorExtension.swift in Sources */,
+				1300F85C912F4B353B9107A5 /* ContentView.swift in Sources */,
+				B810E6D825E4BC4E50F62D27 /* CreateCallView.swift in Sources */,
+				99A765A804D43977476627E7 /* DashboardView.swift in Sources */,
+				7E4DB8820DD2675AC3B2C931 /* DateExtension.swift in Sources */,
+				16B626931252F739759DCA25 /* FirebaseService.swift in Sources */,
+				7C1E7BBBDC1DBD2536D94187 /* LoginView.swift in Sources */,
+				CD40E5C0939500915DB6301C /* Persistence.swift in Sources */,
+				77330EE63B191833CAA88A0C /* ViewHelper.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		104DA65BEDC32D33A19C2046 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		3CF3244E59C0F2A648AE8559 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		72040008C91699614751EB94 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B2Z9554PNT;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = CallTrackeriOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.CallTrackeriOS;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E0D2E3ECE5F8CDBE56DC5393 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B2Z9554PNT;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = CallTrackeriOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.CallTrackeriOS;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9C12FF143E801E6619D6D43B /* Build configuration list for PBXProject "CallTrackeriOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3CF3244E59C0F2A648AE8559 /* Debug */,
+				104DA65BEDC32D33A19C2046 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B422AFB9D785FD320B8E1849 /* Build configuration list for PBXNativeTarget "CallTrackeriOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				72040008C91699614751EB94 /* Debug */,
+				E0D2E3ECE5F8CDBE56DC5393 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4E4F2FC2DBEE590F756AC3B3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
+		CC2FAA12318476EF4F91B2B6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		096E5996B185111F9BB839CF /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC2FAA12318476EF4F91B2B6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		10FBBFD55CB621D6568B16BC /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC2FAA12318476EF4F91B2B6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		14AFBAA632F13B951F413B6C /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC2FAA12318476EF4F91B2B6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		397AB0262CD0A7CABB664C74 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4E4F2FC2DBEE590F756AC3B3 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		9709AA627D54A21258D3D1AE /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC2FAA12318476EF4F91B2B6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		CE253E10EA9CD8AAFA12688F /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC2FAA12318476EF4F91B2B6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		FBFDDD944CCA0E8BE1E3D18D /* FirebaseFirestoreSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC2FAA12318476EF4F91B2B6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestoreSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCVersionGroup section */
+		EC0DD359AF1443E922F9D585 /* CallTrackerModel.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				DF880F48E820BFE8558D7006 /* CallTrackerModel.xcdatamodel */,
+			);
+			currentVersion = DF880F48E820BFE8558D7006 /* CallTrackerModel.xcdatamodel */;
+			path = CallTrackerModel.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
+	};
+	rootObject = 9BEBE9D0F4F7F40848A46601 /* Project object */;
+}

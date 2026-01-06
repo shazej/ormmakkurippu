@@ -5,7 +5,7 @@ import UIKit
 
 @MainActor
 class CallViewModel: ObservableObject {
-    @Published var calls: [Call] = []
+    @Published var calls: [CallModel] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -55,7 +55,7 @@ class CallViewModel: ObservableObject {
                     attachmentUrl = try await service.uploadAttachment(image: image, userId: userId)
                 }
                 
-                let call = Call(
+                let call = CallModel(
                     name: name,
                     phone: phone,
                     date: Date(),
@@ -77,7 +77,7 @@ class CallViewModel: ObservableObject {
         }
     }
     
-    func updateStatus(call: Call, newStatus: String) {
+    func updateStatus(call: CallModel, newStatus: String) {
         guard let id = call.id else { return }
         Task {
             do {
@@ -93,7 +93,7 @@ class CallViewModel: ObservableObject {
         }
     }
     
-    func deleteCall(call: Call) {
+    func deleteCall(call: CallModel) {
         guard let id = call.id else { return }
         Task {
             do {

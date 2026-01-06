@@ -5,7 +5,7 @@ struct CallListView: View {
     @State private var searchText = ""
     @State private var statusFilter: String? = nil
     
-    var filteredCalls: [Call] {
+    var filteredCalls: [CallModel] {
         viewModel.calls.filter { call in
             let matchesSearch = searchText.isEmpty ||
                 call.name.localizedCaseInsensitiveContains(searchText) ||
@@ -65,7 +65,7 @@ struct CallListView: View {
 }
 
 struct CallRow: View {
-    let call: Call
+    let call: CallModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {

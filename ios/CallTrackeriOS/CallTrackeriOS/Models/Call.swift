@@ -2,7 +2,7 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
-struct Call: Identifiable, Codable, Hashable {
+struct CallModel: Identifiable, Codable, Hashable {
     @DocumentID var id: String?
     var name: String
     var phone: String

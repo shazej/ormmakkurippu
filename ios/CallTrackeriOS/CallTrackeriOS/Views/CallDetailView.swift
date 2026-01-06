@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct CallDetailView: View {
-    let call: Call
+    let call: CallModel
     @ObservedObject var viewModel: CallViewModel
     @State private var notes: String
     
-    init(call: Call, viewModel: CallViewModel) {
+    init(call: CallModel, viewModel: CallViewModel) {
         self.call = call
         self.viewModel = viewModel
         _notes = State(initialValue: call.notes ?? "")

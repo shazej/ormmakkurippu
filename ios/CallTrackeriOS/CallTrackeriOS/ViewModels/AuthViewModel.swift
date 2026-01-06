@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import FirebaseAuth
+import FirebaseCore
 import GoogleSignIn
 
 class AuthViewModel: ObservableObject {

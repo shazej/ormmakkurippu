@@ -13,16 +13,16 @@ class FirebaseService {
     
     // MARK: - Calls
     
-    func fetchCalls(for userId: String) async throws -> [Call] {
+    func fetchCalls(for userId: String) async throws -> [CallModel] {
         let snapshot = try await db.collection("calls")
             .whereField("createdByUid", isEqualTo: userId)
             .order(by: "date", descending: true)
             .getDocuments()
         
-        return snapshot.documents.compactMap { try? $0.data(as: Call.self) }
+        return snapshot.documents.compactMap { try? $0.data(as: CallModel.self) }
     }
     
-    func addCall(_ call: Call) throws {
+    func addCall(_ call: CallModel) throws {
         try db.collection("calls").addDocument(from: call)
     }
     
