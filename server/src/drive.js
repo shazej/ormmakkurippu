@@ -1,5 +1,16 @@
 import { google } from 'googleapis';
 import { Readable } from 'stream';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export function getOAuthClient() {
+    return new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+    );
+}
 
 /**
  * Uploads a file to a specific folder in Google Drive.
@@ -57,11 +68,6 @@ export async function uploadToDrive(authClient, file, folderName = 'ormmakurippu
             media: media,
             fields: 'id, name, mimeType, size, webViewLink',
         });
-
-        // 3. Set permissions (optional: make it readable by anyone with link, or just rely on user ownership)
-        // For now, we assume the user owns it so they can see it. 
-        // If we want the specific "Open" link to work for others, we might need permissions, 
-        // but since this is "User's Drive", the User is the one viewing it via the App usually.
 
         return fileRes.data;
     } catch (error) {

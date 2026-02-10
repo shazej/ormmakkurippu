@@ -2,3 +2,7 @@ service-account.json
 *firebase-adminsdk*.json
 .env
 .env.*
+
+# Local Development Artifacts
+cookies.txt
+data/audit_logs.json

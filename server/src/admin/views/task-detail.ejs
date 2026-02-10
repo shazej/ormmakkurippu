@@ -1,0 +1,137 @@
+<h2>
+    <%= task ? 'Edit Task' : 'Create New Task' %>
+</h2>
+
+<form id="taskForm" class="mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label for="title" class="form-label">Title</label>
+                <input type="text" class="form-control" id="title" value="<%= task ? task.title : '' %>" required>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" rows="3"><%= task ? task.description : '' %></textarea>
+            </div>
+
+            <% if (task) { %>
+                <div class="mb-3">
+                    <label class="form-label">Attachments</label>
+                    <div id="attachmentsList" class="mb-2">
+                        <!-- TODO: List existing attachments if any -->
+                    </div>
+                    <div class="input-group">
+                        <input type="file" class="form-control" id="attachmentFile">
+                        <button class="btn btn-outline-secondary" type="button" id="uploadBtn">Upload</button>
+                    </div>
+                    <small class="text-muted" id="uploadStatus"></small>
+                </div>
+                <% } %>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status">
+                            <% ['Pending', 'In Progress' , 'Completed' , 'Cancelled' ].forEach(s=> { %>
+                                <option value="<%= s %>" <%=(task && task.status===s) ? 'selected' : '' %>><%= s %>
+                                </option>
+                                <% }) %>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority">
+                            <% ['Low', 'Medium' , 'High' , 'Urgent' ].forEach(p=> { %>
+                                <option value="<%= p %>" <%=(task && task.priority===p) ? 'selected' : '' %>><%= p %>
+                                </option>
+                                <% }) %>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <input type="text" class="form-control" id="category"
+                            value="<%= task ? task.category : 'General' %>">
+                    </div>
+                    <hr>
+                    <button type="submit" class="btn btn-success w-100">Save Task</button>
+                    <a href="/admin/tasks" class="btn btn-link w-100 mt-2">Back to List</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    const taskId = '<%= task ? task.id : "" %>';
+    const isNew = !taskId;
+
+    document.getElementById('taskForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const data = {
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value,
+            status: document.getElementById('status').value,
+            priority: document.getElementById('priority').value,
+            category: document.getElementById('category').value,
+        };
+
+        try {
+            const url = isNew ? '/admin/api/tasks' : `/admin/api/tasks/${taskId}`;
+            const method = isNew ? 'POST' : 'PUT';
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                alert('Task saved successfully!');
+                window.location.href = '/admin/tasks';
+            } else {
+                const err = await res.json();
+                alert('Error: ' + err.error);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Failed to save task');
+        }
+    });
+
+    <% if (task) { %>
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('attachmentFile');
+            const file = fileInput.files[0];
+            if (!file) return alert('Please select a file');
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('taskId', taskId); // If endpoint supports linking
+
+            document.getElementById('uploadStatus').textContent = 'Uploading...';
+
+            try {
+                // Using backend endpoint. Note: current endpoint doesn't link to task automatically
+                // unless we update it. For now, we'll verify the upload succeeds.
+                const res = await fetch('/api/attachments/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    document.getElementById('uploadStatus').textContent = 'Upload successful: ' + result.file.name;
+                    fileInput.value = '';
+                    // Ideally, we'd add the file metadata to the task attachments array here
+                } else {
+                    throw new Error('Upload failed');
+                }
+            } catch (error) {
+                document.getElementById('uploadStatus').textContent = 'Error: ' + error.message;
+            }
+        });
+    <% } %>
+</script>

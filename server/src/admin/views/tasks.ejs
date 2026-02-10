@@ -1,0 +1,60 @@
+<h2>Task Management <a href="/admin/tasks/new" class="btn btn-primary float-end">Create New Task</a></h2>
+
+<div class="table-responsive mt-4">
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="taskTable">
+            <!-- Populated by JS -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function loadTasks() {
+        const res = await fetch('/admin/api/tasks');
+        const tasks = await res.json();
+        const tbody = document.getElementById('taskTable');
+        tbody.innerHTML = '';
+
+        tasks.forEach(task => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><a href="/admin/tasks/${task.id}">${task.title}</a></td>
+                <td><span class="badge bg-secondary">${task.category || 'General'}</span></td>
+                <td>${task.priority}</td>
+                <td><span class="status-badge status-${task.status.toLowerCase()}">${task.status}</span></td>
+                <td>${new Date(task.created_at).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTask('${task.id}')">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function deleteTask(id) {
+        if (!confirm('Are you sure you want to delete this task?')) return;
+
+        try {
+            const res = await fetch(`/admin/api/tasks/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                loadTasks(); // Refresh
+            } else {
+                alert('Failed to delete task. Check permissions.');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    loadTasks();
+</script>

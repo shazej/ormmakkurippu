@@ -2,22 +2,34 @@ import fs from 'fs';
 import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
-const DATA_FILE = path.join(DATA_DIR, 'tasks.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Ensure data file exists
-if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, '[]', 'utf8');
-}
-
 class LocalDoc {
     constructor(collectionName, id) {
         this.collectionName = collectionName;
         this.id = id;
+    }
+
+    _getFilePath() {
+        return path.join(DATA_DIR, `${this.collectionName}.json`);
+    }
+
+    _readData() {
+        try {
+            const filePath = this._getFilePath();
+            if (!fs.existsSync(filePath)) return [];
+            return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        } catch (e) {
+            return [];
+        }
+    }
+
+    _writeData(data) {
+        fs.writeFileSync(this._getFilePath(), JSON.stringify(data, null, 2), 'utf8');
     }
 
     async get() {
@@ -63,18 +75,6 @@ class LocalDoc {
         const filtered = data.filter(i => i.id !== this.id);
         this._writeData(filtered);
     }
-
-    _readData() {
-        try {
-            return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-        } catch (e) {
-            return [];
-        }
-    }
-
-    _writeData(data) {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
-    }
 }
 
 class LocalCollection {
@@ -82,6 +82,11 @@ class LocalCollection {
         this.name = name;
         this.filters = [];
         this.sorts = [];
+        this.limitVal = null;
+    }
+
+    _getFilePath() {
+        return path.join(DATA_DIR, `${this.name}.json`);
     }
 
     doc(id) {
@@ -98,13 +103,34 @@ class LocalCollection {
         return this;
     }
 
+    limit(n) {
+        this.limitVal = n;
+        return this;
+    }
+
+    async add(data) {
+        const id = Math.random().toString(36).substring(2, 15);
+        const newDoc = new LocalDoc(this.name, id);
+        await newDoc.set(data);
+        return newDoc;
+    }
+
     async get() {
-        let data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+        let data = [];
+        try {
+            const filePath = this._getFilePath();
+            if (fs.existsSync(filePath)) {
+                data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            }
+        } catch (e) {
+            data = [];
+        }
 
         // Apply filters
         for (const filter of this.filters) {
             data = data.filter(item => {
                 if (filter.op === '==') return item[filter.field] === filter.value;
+                if (filter.op === '!=') return item[filter.field] !== filter.value;
                 return true;
             });
         }
@@ -114,13 +140,23 @@ class LocalCollection {
             data.sort((a, b) => {
                 const valA = a[sort.field] || 0;
                 const valB = b[sort.field] || 0;
+                if (typeof valA === 'string' && typeof valB === 'string') {
+                    if (sort.dir === 'desc') return valB.localeCompare(valA);
+                    return valA.localeCompare(valB);
+                }
                 if (sort.dir === 'desc') return valB - valA;
                 return valA - valB;
             });
         }
 
+        // Apply limit
+        if (this.limitVal) {
+            data = data.slice(0, this.limitVal);
+        }
+
         return {
             docs: data.map(item => ({
+                id: item.id,
                 data: () => item
             }))
         };

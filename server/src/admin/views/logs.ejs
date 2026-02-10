@@ -1,0 +1,36 @@
+<h2>Audit Logs</h2>
+
+<div class="table-responsive mt-4">
+    <table class="table table-sm table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Actor</th>
+                <th>Target</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody id="logsTable">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    fetch('/admin/api/audit-logs')
+        .then(res => res.json())
+        .then(logs => {
+            const tbody = document.getElementById('logsTable');
+            logs.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${new Date(log.timestamp).toLocaleString()}</td>
+                    <td><span class="badge bg-info text-dark">${log.action}</span></td>
+                    <td>${log.actorEmail} <br><small class="text-muted">${log.actorRole}</small></td>
+                    <td>${log.targetType}: ${log.targetId}</td>
+                    <td><pre style="max-width: 300px; font-size: 0.8em;">${JSON.stringify(log.details || {}, null, 2)}</pre></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+</script>

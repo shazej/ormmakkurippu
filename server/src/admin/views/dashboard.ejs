@@ -1,0 +1,37 @@
+<h2>Dashboard</h2>
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-header">Total Tasks</div>
+            <div class="card-body">
+                <h5 class="card-title display-4" id="totalTasks">-</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-header">Pending</div>
+            <div class="card-body">
+                <h5 class="card-title display-4" id="pendingTasks">-</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Completed</div>
+            <div class="card-body">
+                <h5 class="card-title display-4" id="completedTasks">-</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    fetch('/admin/api/tasks')
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('totalTasks').textContent = data.length;
+            document.getElementById('pendingTasks').textContent = data.filter(t => t.status === 'Pending').length;
+            document.getElementById('completedTasks').textContent = data.filter(t => t.status === 'Completed').length;
+        });
+</script>

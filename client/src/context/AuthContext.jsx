@@ -12,12 +12,15 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         if (token) {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             // Restore user session if token exists (optional: verify token with backend)
             // For simplicity, we just assume logged in if token exists, or fetch profile
             // fetchUserProfile(token);
             // Decoding JWT on client side or checking storage for user info
             const storedUser = localStorage.getItem('auth_user');
             if (storedUser) setUser(JSON.parse(storedUser));
+        } else {
+            delete axios.defaults.headers.common['Authorization'];
         }
     }, [token]);
 

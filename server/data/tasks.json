@@ -1,27 +1,13 @@
 [
   {
-    "id": "c66bfd65-b084-4c17-b5d2-7483725de871",
-    "createdAt": 1767480431207,
-    "updatedAt": 1767480431207,
-    "title": "Local DB Task",
-    "fromName": "Verifier",
-    "category": "Work",
-    "priority": "Medium",
-    "status": "Pending",
-    "attachments": []
-  },
-  {
-    "id": "baeff338-4076-4ce6-b027-929e82fce60b",
-    "createdAt": 1767551520203,
-    "updatedAt": 1767551520203,
-    "title": "Browser Verify",
-    "fromName": "Me",
-    "fromPhone": "",
-    "category": "General",
-    "priority": "Medium",
-    "description": "",
-    "notes": "",
-    "status": "Pending",
-    "attachments": []
+    "title": "Audited Task Final",
+    "description": "Testing audit logs and task management.",
+    "status": "Completed",
+    "priority": "High",
+    "category": "QA",
+    "created_at": "2026-02-10T02:20:03.229Z",
+    "updated_at": "2026-02-10T02:20:44.111Z",
+    "createdBy": "test-e2e-user",
+    "id": "wdyi4i0rg2"
   }
 ]
