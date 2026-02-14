@@ -10,6 +10,18 @@ import { verifyFirebaseToken } from './middleware/auth.js';
 import { uploadToDrive, getOAuthClient } from './drive.js';
 import { google } from 'googleapis';
 import adminRoutes from './admin/routes.js'; // Added
+import accountRoutes from './features/account/account.routes.js'; // Added
+import securityRoutes from './features/security/security.routes.js'; // Added
+import mfaRoutes from './features/mfa/mfa.routes.js'; // Added
+import tasksRoutes from './features/tasks/tasks.routes.js'; // Added
+
+
+import { SecurityService } from './features/security/security.service.js'; // Added
+import { UsersRepository } from './features/users/users.repository.js'; // Added
+import { AllowedIpsRepository } from './features/security/security.repository.js'; // Added
+import argon2 from 'argon2'; // Added
+
+const securityService = new SecurityService();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +42,30 @@ app.use(express.json());
 app.use(cookieParser()); // Added
 app.use(express.urlencoded({ extended: true })); // Added for form posts if needed
 
+import settingsRoutes from './features/settings/settings.routes.js'; // Added
+
+import linkedAccountsRoutes from './features/linked-accounts/linked-accounts.routes.js'; // Added
+
+// Account Routes
+app.use('/api/account/mfa', mfaRoutes);
+app.use('/api/account/security', securityRoutes);
+app.use('/api/account/settings', settingsRoutes); // Added
+import accountClosureRoutes from './features/account-closure/account-closure.routes.js'; // Added
+
+import activityRoutes from './features/activity/activity.routes.js'; // Added
+
+import groupsRoutes from './features/groups/groups.routes.js'; // Added
+
+import privacyRoutes from './features/privacy/privacy.routes.js'; // Added
+import complianceRoutes from './features/compliance/compliance.routes.js'; // Added
+
+app.use('/api/account/linked-accounts', linkedAccountsRoutes);
+app.use('/api/account/close', accountClosureRoutes);
+app.use('/api/account/activity', activityRoutes); // Added
+app.use('/api/account/groups', groupsRoutes); // Added
+app.use('/api/privacy', privacyRoutes); // Added
+app.use('/api/compliance', complianceRoutes); // Added
+app.use('/api/account', accountRoutes);
 // Admin Routes
 app.use('/admin', adminRoutes);
 
@@ -105,13 +141,51 @@ app.post('/api/auth/google', async (req, res) => {
         // MOCK AUTH for Demo/E2E
         if (process.env.E2E_TEST_MODE === 'true') {
             console.log('🧪 E2E_TEST_MODE: Mocking Google Auth Code Exchange');
+            const user = {
+                uid: 'test-e2e-user',
+                email: 'test@example.com',
+                name: 'Test User',
+                picture: ''
+            };
+
+            // Seed User for E2E
+            const usersRepo = new UsersRepository();
+            const allowedIpsRepo = new AllowedIpsRepository();
+
+            const existing = await usersRepo.findById(user.uid);
+            const mockHash = await argon2.hash('password123');
+
+            if (!existing) {
+                await usersRepo.create({
+                    ...user,
+                    password_hash: mockHash
+                }, user.uid);
+            } else {
+                await usersRepo.update(user.uid, { password_hash: mockHash });
+            }
+
+            // Ensure no IP restrictions for E2E user
+            const currentIps = await allowedIpsRepo.findByUserId(user.uid);
+            for (const ip of currentIps) {
+                await allowedIpsRepo.delete(ip.id);
+            }
+
+            // E2E Security Check
+            try {
+                await securityService.checkLoginPolicy(user, req);
+                await securityService.createSession(user, req);
+            } catch (policyError) {
+                console.error('E2E Login Policy Block:', policyError);
+                if (policyError.code === 'GEOFENCE_BLOCK' || policyError.code === 'IP_NOT_ALLOWED') {
+                    return res.status(403).json({
+                        error: policyError.message,
+                        reason_code: policyError.code
+                    });
+                }
+            }
+
             return res.json({
-                user: {
-                    id: 'test-e2e-user',
-                    email: 'test@example.com',
-                    name: 'Test User',
-                    picture: ''
-                },
+                user: { ...user, id: user.uid },
                 tokens: {
                     id_token: 'e2e-magic-token',
                     access_token: 'mock-access-token',
@@ -138,13 +212,31 @@ app.post('/api/auth/google', async (req, res) => {
         // we might fail here in production without further bridge code. 
         // But for this task, the mock handles the "Show" requirement.
 
+        const user = {
+            uid: payload.sub,
+            email: payload.email,
+            name: payload.name,
+            picture: payload.picture
+        };
+
+        // --- SECURITY CHECK & SESSION TRACKING ---
+        try {
+            await securityService.checkLoginPolicy(user, req);
+            await securityService.createSession(user, req);
+        } catch (policyError) {
+            console.error('Login Policy Block:', policyError);
+            if (policyError.code === 'GEOFENCE_BLOCK' || policyError.code === 'IP_NOT_ALLOWED') {
+                return res.status(403).json({
+                    error: policyError.message,
+                    reason_code: policyError.code
+                });
+            }
+            // Fallback for other errors
+            throw policyError;
+        }
+
         res.json({
-            user: {
-                id: payload.sub,
-                email: payload.email,
-                name: payload.name,
-                picture: payload.picture
-            },
+            user,
             tokens
         });
 
@@ -156,134 +248,9 @@ app.post('/api/auth/google', async (req, res) => {
 
 // --- Tasks Routes (Protected) ---
 
-app.use('/api/tasks', verifyFirebaseToken);
+app.use('/api/tasks', tasksRoutes);
 
-app.get('/api/tasks', async (req, res) => {
-    try {
-        const { includeDeleted } = req.query;
-        const tasksRef = db.collection('tasks');
 
-        // Scope to authenticated user
-        let query = tasksRef.where('uid', '==', req.user.uid);
-
-        if (includeDeleted !== 'true') {
-            // Firestore doesn't support != directly easily without compound indexes sometimes, 
-            // so we usually filter for 'status' != 'deleted' or 'deletedAt' == null.
-            // Simpler: fetch and filter or query where deletedAt is null?
-            // Fetch all for user, then filter in memory if list is small, OR use composite index.
-            // Let's assume 'status' field is used.
-            query = query.where('status', '!=', 'deleted');
-        }
-
-        const snapshot = await query.orderBy('created_at', 'desc').get();
-
-        const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json(tasks);
-    } catch (error) {
-        console.error('Error fetching tasks:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/tasks', async (req, res) => {
-    try {
-        const { title: reqTitle, description, fromName, fromPhone, category, priority, status, notes } = req.body;
-
-        const title = reqTitle || (description ? description.substring(0, 50) : 'Untitled Task');
-
-        const newTask = {
-            uid: req.user.uid, // Scope to user
-            title,
-            description: description || '',
-            fromName: fromName || '',
-            fromPhone: fromPhone || '',
-            category: category || 'General',
-            priority: priority || 'Medium',
-            status: status || 'Pending',
-            notes: notes || '',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            deletedAt: null
-        };
-
-        const docRef = await db.collection('tasks').add(newTask);
-        res.status(201).json({ id: docRef.id, ...newTask });
-    } catch (error) {
-        console.error('Error creating task:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/tasks/:id', async (req, res) => {
-    try {
-        const docRef = db.collection('tasks').doc(req.params.id);
-        const doc = await docRef.get();
-
-        if (!doc.exists) {
-            return res.status(404).json({ error: 'Task not found' });
-        }
-
-        const task = doc.data();
-
-        // Security check
-        if (task.uid !== req.user.uid) {
-            return res.status(403).json({ error: 'Forbidden' });
-        }
-
-        res.json({ id: doc.id, ...task });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.put('/api/tasks/:id', async (req, res) => {
-    try {
-        const { title, description, fromName, fromPhone, category, priority, status, notes } = req.body;
-        const docRef = db.collection('tasks').doc(req.params.id);
-
-        const doc = await docRef.get();
-        if (!doc.exists) return res.status(404).json({ error: 'Task not found' });
-        if (doc.data().uid !== req.user.uid) return res.status(403).json({ error: 'Forbidden' });
-
-        const updateData = {
-            updated_at: new Date().toISOString()
-        };
-
-        if (title !== undefined) updateData.title = title;
-        if (description !== undefined) updateData.description = description;
-        if (fromName !== undefined) updateData.fromName = fromName;
-        if (fromPhone !== undefined) updateData.fromPhone = fromPhone;
-        if (category !== undefined) updateData.category = category;
-        if (priority !== undefined) updateData.priority = priority;
-        if (status !== undefined) updateData.status = status;
-        if (notes !== undefined) updateData.notes = notes;
-
-        await docRef.update(updateData);
-
-        res.json({ id: req.params.id, message: 'Task updated', ...updateData });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.delete('/api/tasks/:id', async (req, res) => {
-    try {
-        const docRef = db.collection('tasks').doc(req.params.id);
-        const doc = await docRef.get();
-        if (!doc.exists) return res.status(404).json({ error: 'Task not found' });
-        if (doc.data().uid !== req.user.uid) return res.status(403).json({ error: 'Forbidden' });
-
-        // Soft delete
-        await docRef.update({
-            deletedAt: new Date().toISOString(),
-            status: 'deleted'
-        });
-
-        res.json({ message: 'Task deleted' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // --- Uploads Route (Protected) ---
 
