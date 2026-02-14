@@ -89,23 +89,34 @@ class LocalCollection {
         return path.join(DATA_DIR, `${this.name}.json`);
     }
 
+    _clone() {
+        const q = new LocalCollection(this.name);
+        q.filters = [...this.filters];
+        q.sorts = [...this.sorts];
+        q.limitVal = this.limitVal;
+        return q;
+    }
+
     doc(id) {
         return new LocalDoc(this.name, id);
     }
 
     where(field, op, value) {
-        this.filters.push({ field, op, value });
-        return this;
+        const q = this._clone();
+        q.filters.push({ field, op, value });
+        return q;
     }
 
     orderBy(field, dir = 'asc') {
-        this.sorts.push({ field, dir });
-        return this;
+        const q = this._clone();
+        q.sorts.push({ field, dir });
+        return q;
     }
 
     limit(n) {
-        this.limitVal = n;
-        return this;
+        const q = this._clone();
+        q.limitVal = n;
+        return q;
     }
 
     async add(data) {
@@ -154,11 +165,14 @@ class LocalCollection {
             data = data.slice(0, this.limitVal);
         }
 
+        const docs = data.map(item => ({
+            id: item.id,
+            data: () => item
+        }));
+
         return {
-            docs: data.map(item => ({
-                id: item.id,
-                data: () => item
-            }))
+            docs,
+            empty: docs.length === 0
         };
     }
 }
