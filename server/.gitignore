@@ -6,3 +6,9 @@ service-account.json
 # Local Development Artifacts
 cookies.txt
 data/audit_logs.json
+data/*.json
+data/*.db
+data/*.sqlite
+server.log
+
+/src/generated/prisma
