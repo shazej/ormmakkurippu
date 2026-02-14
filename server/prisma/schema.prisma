@@ -1,0 +1,289 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+  MANAGER
+}
+
+model User {
+  id                  String    @id @default(uuid())
+  password_hash       String?   // Optional for social-only users
+  password_updated_at DateTime?
+  primary_email_id    String?
+  marketing_mobile    String?
+  preferences         Json?     @default("{}")
+  role                Role      @default(USER)
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  emails              UserEmail[]
+  mfa_methods         MfaMethod[]
+  webauthn_creds      WebAuthnCredential[]
+  allowed_ips         AllowedIp[]
+  geofence            Geofence?
+  app_passwords       AppPassword[]
+  sessions            Session[]
+  oauth_consents      OAuthConsent[]
+  notification_settings NotificationSettings?
+  audit_logs          AuditLog[]
+  tasks               Task[]
+  linked_accounts     LinkedAccount[]
+  owned_groups        Group[]
+  group_memberships   GroupMember[]
+
+  @@map("users")
+}
+
+model UserEmail {
+  id                      String    @id @default(uuid())
+  user_id                 String
+  email                   String    @unique
+  is_primary              Boolean   @default(false)
+  is_verified             Boolean   @default(false)
+  verification_token_hash String?
+  verification_expires_at DateTime?
+  created_at              DateTime  @default(now())
+
+  user                    User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("user_emails")
+}
+
+enum MfaType {
+  totp
+  webauthn
+  email_otp
+}
+
+enum MfaStatus {
+  enabled
+  disabled
+}
+
+model MfaMethod {
+  id               String    @id @default(uuid())
+  user_id          String
+  type             MfaType
+  status           MfaStatus
+  secret_encrypted String?
+  name             String?
+  created_at       DateTime  @default(now())
+  last_used_at     DateTime?
+
+  user             User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("mfa_methods")
+}
+
+model WebAuthnCredential {
+  id            String    @id @default(uuid())
+  user_id       String
+  credential_id String    @unique
+  public_key    String
+  counter       Int       @default(0)
+  device_name   String?
+  created_at    DateTime  @default(now())
+  last_used_at  DateTime?
+
+  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("webauthn_credentials")
+}
+
+model AllowedIp {
+  id         String   @id @default(uuid())
+  user_id    String
+  cidr       String
+  label      String?
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("allowed_ips")
+}
+
+model Geofence {
+  user_id           String   @id // 1:1 relation
+  enabled           Boolean  @default(false)
+  allowed_countries String[] // ISO codes
+  updated_at        DateTime @updatedAt
+
+  user              User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("geofences")
+}
+
+model AppPassword {
+  id            String    @id @default(uuid())
+  user_id       String
+  name          String
+  password_hash String
+  last_used_at  DateTime?
+  created_at    DateTime  @default(now())
+  revoked_at    DateTime?
+
+  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("app_passwords")
+}
+
+model Session {
+  id                 String    @id @default(uuid())
+  user_id            String
+  refresh_token_hash String?
+  user_agent         String?
+  ip                 String?
+  country            String?
+  city               String?
+  device_label       String?
+  created_at         DateTime  @default(now())
+  last_seen_at       DateTime?
+  revoked_at         DateTime?
+
+  user               User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("sessions")
+}
+
+model OAuthConsent {
+  id          String    @id @default(uuid())
+  user_id     String
+  client_id   String
+  client_name String
+  scopes      String[]
+  created_at  DateTime  @default(now())
+  last_used_at DateTime?
+  revoked_at  DateTime?
+
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("oauth_consents")
+}
+
+model NotificationSettings {
+  user_id                  String   @id
+  new_signin_alert         Boolean  @default(true)
+  third_party_access_alert Boolean  @default(true)
+  newsletter_subscription  Boolean  @default(false)
+  updated_at               DateTime @updatedAt
+
+  user                     User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_id     String?
+  action      String
+  entity_type String
+  entity_id   String?
+  ip          String?
+  user_agent  String?
+  metadata    Json?
+  created_at  DateTime @default(now())
+
+  user        User?    @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@map("audit_logs")
+}
+
+// --- Application Features ---
+
+model Task {
+  id          String    @id @default(uuid())
+  user_id     String
+  title       String
+  description String?
+  from_name   String?
+  from_phone  String?
+  category    String    @default("General")
+  priority    String    @default("Medium")
+  status      String    @default("Pending")
+  notes       String?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("tasks")
+}
+
+model LinkedAccount {
+  id               String    @id @default(uuid())
+  user_id          String
+  provider         String
+  provider_user_id String
+  email            String?
+  avatar_url       String?
+  access_token     String?
+  refresh_token    String?
+  created_at       DateTime  @default(now())
+  deleted_at       DateTime?
+
+  user             User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([provider, provider_user_id])
+  @@index([user_id])
+  @@map("linked_accounts")
+}
+
+model Group {
+  id            String    @id @default(uuid())
+  owner_user_id String
+  name          String
+  description   String?
+  created_at    DateTime  @default(now())
+  deleted_at    DateTime?
+
+  owner         User          @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+  members       GroupMember[]
+
+  @@index([owner_user_id])
+  @@map("groups")
+}
+
+enum GroupRole {
+  MEMBER
+  ADMIN
+}
+
+enum GroupMemberStatus {
+  PENDING
+  ACCEPTED
+}
+
+model GroupMember {
+  id        String            @id @default(uuid())
+  group_id  String
+  user_id   String?           // Nullable if invited by email but not yet registered/linked
+  email     String?
+  role      GroupRole         @default(MEMBER)
+  status    GroupMemberStatus @default(PENDING)
+  joined_at DateTime          @default(now())
+
+  group     Group             @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  user      User?             @relation(fields: [user_id], references: [id])
+
+  @@index([group_id])
+  @@index([user_id])
+  @@map("group_members")
+}
