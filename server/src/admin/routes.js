@@ -2,8 +2,10 @@ import express from 'express';
 import { db } from '../firebase.js'; // Adjust path if needed
 import { verifyFirebaseToken } from '../middleware/auth.js';
 import { verifyRole } from '../middleware/rbac.js';
-import { logAudit } from './audit.js';
-import { logSystemEvent } from './system-log.js';
+import { AdminController } from './admin.controller.js';
+
+const controller = new AdminController();
+
 
 const router = express.Router();
 
@@ -76,78 +78,19 @@ router.post('/auth/logout', (req, res) => {
 });
 
 // Get Tasks (Admin Scope)
-router.get('/api/tasks', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'READ_ONLY']), async (req, res) => {
-    try {
-        const snapshot = await db.collection('tasks').orderBy('created_at', 'desc').get();
-        const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json(tasks);
-    } catch (error) {
-        console.error('Admin API Error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+router.get('/api/tasks', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'READ_ONLY']), (req, res) => controller.getTasks(req, res));
 
 // Delete Task (Admin Only)
-router.delete('/api/tasks/:id', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN']), async (req, res) => {
-    try {
-        const { id } = req.params;
-        await db.collection('tasks').doc(id).delete();
-
-        await logAudit(req.user, 'DELETE_TASK', 'task', id, { reason: 'Admin deletion' });
-
-        res.json({ status: 'success' });
-    } catch (error) {
-        console.error('Admin API Error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+router.delete('/api/tasks/:id', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN']), (req, res) => controller.deleteTask(req, res));
 
 // Create Task (Admin)
-router.post('/api/tasks', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN']), async (req, res) => {
-    try {
-        const data = req.body;
-        const ref = await db.collection('tasks').add({
-            ...data,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            createdBy: req.user.uid // Admin UID
-        });
-
-        await logAudit(req.user, 'CREATE_TASK', 'task', ref.id, { title: data.title });
-
-        res.json({ id: ref.id, ...data });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+router.post('/api/tasks', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN']), (req, res) => controller.createTask(req, res));
 
 // Update Task (Admin)
-router.put('/api/tasks/:id', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN']), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const data = req.body;
-        await db.collection('tasks').doc(id).update({
-            ...data,
-            updated_at: new Date().toISOString()
-        });
-
-        await logAudit(req.user, 'UPDATE_TASK', 'task', id, { updates: Object.keys(data) });
-
-        res.json({ status: 'success' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+router.put('/api/tasks/:id', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN']), (req, res) => controller.updateTask(req, res));
 
 // Get Audit Logs
-router.get('/api/audit-logs', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN']), async (req, res) => {
-    try {
-        const snapshot = await db.collection('audit_logs').orderBy('timestamp', 'desc').limit(100).get();
-        const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json(logs);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+router.get('/api/audit-logs', verifyFirebaseToken, verifyRole(['SUPER_ADMIN', 'ADMIN']), (req, res) => controller.getAuditLogs(req, res));
+
 
 export default router;
