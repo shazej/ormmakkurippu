@@ -55,18 +55,21 @@ async function runTests() {
         body: JSON.stringify(newTask)
     });
 
-    const createdTask = await createRes.json();
+    const body = await createRes.json();
+    const createdTask = body.data || body;
+
     console.log(`Create Task: ${createRes.status} ${createRes.status === 201 ? '✅' : '❌'} (ID: ${createdTask.id})`);
 
     if (!createdTask.id) {
         console.error('Failed to create task, aborting CRUD tests');
-        console.error(createdTask);
+        console.error(body);
         return;
     }
 
     // 4. List Tasks
     const listRes = await fetch(`${API_BASE}/tasks`, { headers });
-    const tasks = await listRes.json();
+    const listBody = await listRes.json();
+    const tasks = listBody.data || listBody;
     const found = tasks.find(t => t.id === createdTask.id);
     console.log(`List Tasks: ${listRes.status} ${found ? '✅ Task Found' : '❌ Task Missing'}`);
 
@@ -76,8 +79,9 @@ async function runTests() {
         headers,
         body: JSON.stringify({ status: 'Completed' })
     });
-    const updatedBody = await updateRes.json();
-    console.log(`Update Task: ${updateRes.status} ${updatedBody.status === 'Completed' ? '✅' : '❌'}`);
+    const updateBody = await updateRes.json();
+    const updatedTask = updateBody.data || updateBody;
+    console.log(`Update Task: ${updateRes.status} ${updatedTask.status === 'Completed' ? '✅' : '❌'}`);
 
     // 6. Delete Task
     const deleteRes = await fetch(`${API_BASE}/tasks/${createdTask.id}`, {
