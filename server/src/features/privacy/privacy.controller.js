@@ -6,9 +6,10 @@ const service = new PrivacyService();
 
 export class PrivacyController {
 
-    // Stub Org ID extraction (Mock: use 'default-org')
+    // For this MVP/Phase, we treat the User as the Organization owner.
+    // So Org ID = User UID.
     getOrgId(req) {
-        return req.query.org_id || 'default-org';
+        return req.user.uid;
     }
 
     async getDpa(req, res) {

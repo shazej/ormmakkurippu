@@ -21,10 +21,10 @@ export class LinkedAccountsService {
             email: `user-at-${provider}@example.com`
         };
 
-        // 2. Check if already linked to THIS user
+        // 2. Check if already linked to THIS user (Prevent duplicates for same provider)
         const existing = await repo.findByUserId(user.uid);
-        if (existing.find(a => a.provider === provider && a.provider_user_id === mockProfile.id)) {
-            throw new AppError(ErrorCodes.RESOURCE_ALREADY_EXISTS, 'Account already linked');
+        if (existing.find(a => a.provider === provider)) {
+            throw new AppError(ErrorCodes.RESOURCE_ALREADY_EXISTS, `You have already linked a ${provider} account.`);
         }
 
         // 3. Check if linked to ANOTHER user (Conflict)

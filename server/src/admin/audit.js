@@ -1,4 +1,6 @@
-import { db } from '../firebase.js';
+import { ActivityRepository } from '../features/activity/activity.repository.js';
+
+const activityRepo = new ActivityRepository();
 
 /**
  * Logs an audit event to the 'audit_logs' collection.
@@ -11,7 +13,6 @@ import { db } from '../firebase.js';
 export const logAudit = async (actor, action, targetType, targetId, details = {}) => {
     try {
         const auditEntry = {
-            timestamp: new Date().toISOString(),
             actorUid: actor?.uid || 'system',
             actorEmail: actor?.email || 'unknown',
             actorRole: actor?.role || 'unknown',
@@ -24,18 +25,13 @@ export const logAudit = async (actor, action, targetType, targetId, details = {}
         };
 
         if (process.env.E2E_TEST_MODE === 'true') {
-            try {
-                // @ts-ignore
-                await db.collection('audit_logs').add(auditEntry);
-                console.log('🛡️ [Audit (Demo)]:', action, targetType, targetId);
-            } catch (e) {
-                console.warn('⚠️ Could not log audit in Demo Mode:', e.message);
-            }
-        } else {
-            await db.collection('audit_logs').add(auditEntry);
-            // console.log('🛡️ [Audit]:', action);
+            console.log('🛡️ [Audit (Demo)]:', action, targetType, targetId);
         }
+
+        await activityRepo.create(auditEntry);
+
     } catch (error) {
         console.error('❌ Failed to log audit event:', error);
     }
 };
+

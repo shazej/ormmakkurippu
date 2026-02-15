@@ -36,7 +36,10 @@ export class PrivacyService {
         const dpa = await dpaRepo.findById(dpaId);
         if (!dpa) throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND, 'DPA record not found');
 
-        // Check permissions (e.g. initiated by same user or admin)
+        // Check ownership
+        if (dpa.organization_id !== user.uid) {
+            throw new AppError(ErrorCodes.ACCESS_DENIED, 'Access denied');
+        }
 
         await dpaRepo.update(dpaId, { status: 'revoked' });
         await logAudit(user, 'REVOKE_DPA', 'dpa_record', dpaId, {});
@@ -45,10 +48,16 @@ export class PrivacyService {
 
     // --- Contacts ---
     async listContacts(user, organizationId) {
+        // organizationId passed from controller is user.uid
+        if (organizationId !== user.uid) {
+            throw new AppError(ErrorCodes.ACCESS_DENIED, 'Access denied');
+        }
         return contactsRepo.findByOrganizationId(organizationId);
     }
 
     async addContact(user, organizationId, contactData) {
+        if (organizationId !== user.uid) throw new AppError(ErrorCodes.ACCESS_DENIED, 'Access denied');
+
         const contact = await contactsRepo.create({
             organization_id: organizationId,
             ...contactData,
@@ -59,12 +68,22 @@ export class PrivacyService {
     }
 
     async updateContact(user, id, data) {
+        const contact = await contactsRepo.findById(id);
+        if (!contact) throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND, 'Contact not found');
+
+        if (contact.organization_id !== user.uid) throw new AppError(ErrorCodes.ACCESS_DENIED, 'Access denied');
+
         await contactsRepo.update(id, data);
         await logAudit(user, 'UPDATE_ORG_CONTACT', 'org_contact', id, {});
         return { success: true };
     }
 
     async deleteContact(user, id) {
+        const contact = await contactsRepo.findById(id);
+        if (!contact) throw new AppError(ErrorCodes.RESOURCE_NOT_FOUND, 'Contact not found');
+
+        if (contact.organization_id !== user.uid) throw new AppError(ErrorCodes.ACCESS_DENIED, 'Access denied');
+
         await contactsRepo.delete(id);
         await logAudit(user, 'DELETE_ORG_CONTACT', 'org_contact', id, {});
         return { success: true };

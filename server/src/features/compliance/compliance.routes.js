@@ -1,31 +1,19 @@
 import express from 'express';
+import { ComplianceController } from './compliance.controller.js';
+import { verifyFirebaseToken } from '../../middleware/auth.js';
+import { verifyRole } from '../../middleware/rbac.js';
 
 const router = express.Router();
+const controller = new ComplianceController();
 
-// Read-only certifications
-router.get('/certifications', (req, res) => {
-    // Mock Data
-    const certs = [
-        {
-            id: 'iso-27001',
-            name: 'ISO/IEC 27001:2013',
-            standard: 'Information Security Management',
-            badge_url: 'https://example.com/badges/iso27001.png',
-            valid_from: '2024-01-01',
-            valid_to: '2027-01-01',
-            region: 'Global'
-        },
-        {
-            id: 'gdpr',
-            name: 'GDPR Compliance',
-            standard: 'Data Privacy',
-            badge_url: 'https://example.com/badges/gdpr.png',
-            valid_from: '2024-01-01',
-            valid_to: '2025-01-01',
-            region: 'EU'
-        }
-    ];
-    res.json(certs);
-});
+// Public / Read-Only
+router.get('/certifications', (req, res) => controller.getAll(req, res));
+router.get('/certifications/:id', (req, res) => controller.getOne(req, res));
+
+// Admin Protected
+router.post('/certifications', verifyFirebaseToken, verifyRole(['ADMIN', 'SUPER_ADMIN']), (req, res) => controller.create(req, res));
+router.put('/certifications/:id', verifyFirebaseToken, verifyRole(['ADMIN', 'SUPER_ADMIN']), (req, res) => controller.update(req, res));
+router.delete('/certifications/:id', verifyFirebaseToken, verifyRole(['ADMIN', 'SUPER_ADMIN']), (req, res) => controller.delete(req, res));
 
 export default router;
+

@@ -1,30 +1,30 @@
-import { BaseRepository } from '../../core/base-repository.js';
-import { AppError } from '../../utils/errors.js';
-
-// We reuse Audit Logs for Activity.
-// But we might want a specialized read-only view.
-// In Firebase/LocalDb, we can just query the 'audit_logs' collection.
+import { ActivityRepository } from './activity.repository.js';
+import { AppError } from '../../utils/app-error.js';
 
 export class ActivityService {
     constructor() {
-        this.auditRepo = new BaseRepository('audit_logs');
-        this.appSigninsRepo = new BaseRepository('app_signins'); // New collection for app usage
+        this.repository = new ActivityRepository();
     }
 
     async listActivity(user, filters = {}, limit = 50) {
-        // Enforce user_id filter
+        // Enforce querying only the user's own activity
         const queryFilters = [
-            { field: 'actorUid', op: '==', value: user.uid },
-            ...Object.entries(filters).map(([key, value]) => ({ field: key, op: '==', value }))
+            { field: 'actorUid', op: '==', value: user.uid }
         ];
 
-        // This is a rough mapping. Real audit logs might need better indexing.
-        return this.auditRepo.find(queryFilters, limit, { field: 'timestamp', dir: 'desc' });
+        // Add other allowed filters (e.g., targetType)
+        if (filters.targetType) {
+            queryFilters.push({ field: 'targetType', op: '==', value: filters.targetType });
+        }
+        if (filters.action) {
+            queryFilters.push({ field: 'action', op: '==', value: filters.action });
+        }
+
+        return await this.repository.find(queryFilters, parseInt(limit) || 50);
     }
 
-    async listAppSignins(user) {
-        return this.appSigninsRepo.find([
-            { field: 'user_id', op: '==', value: user.uid }
-        ], 50, { field: 'last_used_at', dir: 'desc' });
+    async createLog(data) {
+        return await this.repository.create(data);
     }
 }
+

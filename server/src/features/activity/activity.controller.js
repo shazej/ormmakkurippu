@@ -1,5 +1,5 @@
 import { ActivityService } from './activity.service.js';
-import { errorResponse } from '../../utils/errors.js';
+import { sendSuccess, sendError } from '../../utils/api-response.js';
 
 const service = new ActivityService();
 
@@ -11,15 +11,14 @@ export class ActivityController {
             const filters = {};
             if (type) filters.action = type.toUpperCase();
 
-            const result = await service.listActivity(req.user, filters, limit ? parseInt(limit) : 50);
-            res.json(result);
-        } catch (error) { errorResponse(res, error); }
-    }
+            // Support targetType filtering
+            if (req.query.targetType) filters.targetType = req.query.targetType;
 
-    async listAppSignins(req, res) {
-        try {
-            const result = await service.listAppSignins(req.user);
-            res.json(result);
-        } catch (error) { errorResponse(res, error); }
+            const result = await service.listActivity(req.user, filters, limit);
+            sendSuccess(res, result);
+        } catch (error) {
+            sendError(res, error);
+        }
     }
 }
+

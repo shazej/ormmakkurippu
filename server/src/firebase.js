@@ -30,7 +30,15 @@ if (process.env.E2E_TEST_MODE === 'true') {
             }
             throw new Error('Invalid mock token');
         },
-        getUser: async (uid) => ({ uid, email: 'test@example.com' })
+        getUser: async (uid) => ({ uid, email: 'test@example.com' }),
+
+        // Added mocks for Phase 2 features
+        generatePasswordResetLink: async (email) => `http://localhost:4000/mock/reset-password?email=${email}`,
+        generateEmailVerificationLink: async (email) => `http://localhost:4000/mock/verify-email?email=${email}`,
+        updateUser: async (uid, properties) => {
+            console.log(`[Mock Auth] Updated user ${uid}:`, properties);
+            return { uid, ...properties };
+        }
     };
 } else {
     // REAL FIREBASE MODE

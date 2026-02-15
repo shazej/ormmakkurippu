@@ -98,6 +98,9 @@ class LocalCollection {
     }
 
     doc(id) {
+        if (!id) {
+            id = Math.random().toString(36).substring(2, 15);
+        }
         return new LocalDoc(this.name, id);
     }
 

@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import multer from 'multer';
 import cookieParser from 'cookie-parser'; // Added
 import path from 'path'; // Added
+import helmet from 'helmet';
+import { apiLimiter, authLimiter } from './middleware/rate-limit.js';
+
 import { fileURLToPath } from 'url'; // Added
 import { db, auth } from './firebase.js';
 import { verifyFirebaseToken } from './middleware/auth.js';
@@ -14,6 +17,8 @@ import accountRoutes from './features/account/account.routes.js'; // Added
 import securityRoutes from './features/security/security.routes.js'; // Added
 import mfaRoutes from './features/mfa/mfa.routes.js'; // Added
 import tasksRoutes from './features/tasks/tasks.routes.js'; // Added
+import authRoutes from './features/auth/auth.routes.js'; // Added
+
 
 
 import { SecurityService } from './features/security/security.service.js'; // Added
@@ -37,10 +42,23 @@ app.set('views', path.join(__dirname)); // Allow resolving admin/views from src 
 // Or cleaner: app.set('views', path.join(__dirname)); and use 'admin/views/login'
 
 // Middleware
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
-app.use(express.json());
+// Middleware
+app.use(helmet());
+
+// Rate Limiting
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
+
+app.use(cors({
+    origin: process.env.CLIENT_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '10kb' })); // Body limit
 app.use(cookieParser()); // Added
 app.use(express.urlencoded({ extended: true })); // Added for form posts if needed
+
+
 
 import settingsRoutes from './features/settings/settings.routes.js'; // Added
 
@@ -249,6 +267,8 @@ app.post('/api/auth/google', async (req, res) => {
 // --- Tasks Routes (Protected) ---
 
 app.use('/api/tasks', tasksRoutes);
+app.use('/api/auth', authRoutes);
+
 
 
 

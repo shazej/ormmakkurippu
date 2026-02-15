@@ -13,6 +13,14 @@ export const sendError = (res, error) => {
 
     console.error(`ERROR [${statusCode}]:`, error);
 
+    if (error.name === 'ZodError') {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Validation Error',
+            errors: error.errors
+        });
+    }
+
     if (process.env.NODE_ENV === 'development') {
         return res.status(statusCode).json({
             status: 'error',
