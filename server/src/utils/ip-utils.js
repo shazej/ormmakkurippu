@@ -14,7 +14,7 @@ export function isIpInCidr(ip, cidr) {
 }
 
 export function ipToLong(ip) {
-    let parts = ip.split('.');
+    const parts = ip.split('.');
     if (parts.length !== 4) return 0; // Handle IPv6 separately or fail
     return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
 }

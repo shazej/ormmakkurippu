@@ -1,5 +1,6 @@
 export const sendSuccess = (res, data, message = 'Success', statusCode = 200, meta = {}) => {
     res.status(statusCode).json({
+        success: true,
         status: 'success',
         message,
         data,
@@ -13,35 +14,33 @@ export const sendError = (res, error) => {
 
     console.error(`ERROR [${statusCode}]:`, error);
 
+    // STRUCTURED RESPONSE FORMAT
+    const response = {
+        success: false,
+        status: 'error',
+        message: error.message || 'Something went wrong',
+        errors: null
+    };
+
     if (error.name === 'ZodError') {
-        return res.status(400).json({
-            status: 'error',
-            message: 'Validation Error',
-            errors: error.errors
-        });
+        response.message = 'Validation Failed';
+        response.errors = error.errors;
+        return res.status(400).json(response);
     }
 
     if (process.env.NODE_ENV === 'development') {
-        return res.status(statusCode).json({
-            status: 'error',
-            message: error.message,
-            code: error.errorCode || 'INTERNAL_ERROR',
-            stack: error.stack,
-            error
-        });
+        response.stack = error.stack;
+        response.code = error.errorCode || 'INTERNAL_ERROR';
+        return res.status(statusCode).json(response);
     }
 
     if (isOperational) {
-        return res.status(statusCode).json({
-            status: 'error',
-            message: error.message,
-            code: error.errorCode || 'ERROR'
-        });
+        response.code = error.errorCode || 'ERROR';
+        return res.status(statusCode).json(response);
     }
 
-    return res.status(500).json({
-        status: 'error',
-        message: 'Something went wrong',
-        code: 'INTERNAL_ERROR'
-    });
+    // Generic 500
+    response.message = 'Internal Server Error';
+    response.code = 'INTERNAL_ERROR';
+    return res.status(500).json(response);
 };

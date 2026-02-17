@@ -10,6 +10,9 @@ function HomePage() {
     const { user, login, logout } = useAuth();
     const [tasks, setTasks] = useState([])
     const [formInitialData, setFormInitialData] = useState(null)
+    const [createTaskError, setCreateTaskError] = useState(null)
+
+    console.log('[AppDebug] Render. User:', user);
 
     useEffect(() => {
         fetchTasks()
@@ -25,36 +28,40 @@ function HomePage() {
     }
 
     const handleTemplateClick = (template) => {
+        setCreateTaskError(null);
         setFormInitialData({
             category: template.category,
             description: template.description,
             priority: template.priority,
-            // Reset others if needed or keep existing not straightforward with this pattern, 
-            // but TaskForm useEffect handles spread.
         });
     }
 
     const handleSubmit = async (formData) => {
-        // Append Category/Priority to description if needed? 
-        // The original code did that because there were no separate fields in the backend/form for them?
-        // Wait, the original code DID have separate inputs but appended them to description logic:
-        // "const fullDescription = `${description}\n\nCategory: ${category}\nPriority: ${priority}`.trim()"
-        // BUT the backend now HAS separate fields (category, priority).
-        // I updated the backend schema/migrations (well, sqlite schema was there, Firestore is dynamic).
-        // So I should send them as separate fields.
-        // TaskForm sends them as separate fields in formData.
-
+        setCreateTaskError(null);
         try {
             await axios.post('/api/tasks', formData)
-            setFormInitialData(null) // Reset form via initialData? No, TaskForm handles reset? 
-            // TaskForm doesn't auto-reset on submit unless we tell it. 
-            // Ideally TaskForm should handle its own reset or we force remount.
-            // For now, assume success.
+            setFormInitialData(null)
             fetchTasks()
-            window.location.reload(); // Simple clear for now or simple re-fetch
+            window.location.reload();
         } catch (error) {
-            console.error('Error creating task:', error)
-            alert('Error creating task');
+            console.error('Error creating task:', error);
+
+            let errorMessage = 'Error creating task';
+            if (error.response?.data) {
+                // Handle new structured error format
+                const { message, errors } = error.response.data;
+                if (message) errorMessage = message;
+
+                if (errors && Array.isArray(errors)) {
+                    // Start a new line for validation errors
+                    const validationMessages = errors.map(e => `• ${e.message}`).join('\n');
+                    errorMessage += `:\n${validationMessages}`;
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            setCreateTaskError(errorMessage);
         }
     }
 
@@ -105,6 +112,7 @@ function HomePage() {
                     initialData={formInitialData}
                     onSubmit={handleSubmit}
                     buttonText="Add Task"
+                    error={createTaskError}
                 />
             </div>
 

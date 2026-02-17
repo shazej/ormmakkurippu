@@ -29,7 +29,7 @@ function PriorityBadge({ priority }) {
     );
 }
 
-export function TaskList({ tasks, isLoading, error, onEdit, onDelete }) {
+export function TaskList({ tasks, isLoading, error, onEdit, onDelete, onRestore }) {
     if (isLoading) {
         return (
             <div className="flex justify-center items-center py-20">
@@ -46,6 +46,11 @@ export function TaskList({ tasks, isLoading, error, onEdit, onDelete }) {
                 <p className="text-sm">{error}</p>
             </div>
         );
+    }
+
+    if (!Array.isArray(tasks)) {
+        console.error('TaskList received non-array tasks:', tasks);
+        return <div className="text-red-500">Error: Tasks data is not an array.</div>;
     }
 
     if (tasks.length === 0) {

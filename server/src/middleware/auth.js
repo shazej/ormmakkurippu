@@ -1,6 +1,10 @@
 import { auth } from '../firebase.js';
 
 export const verifyFirebaseToken = async (req, res, next) => {
+    console.log('[AuthDebug] Headers:', JSON.stringify(req.headers));
+    console.log('[AuthDebug] Cookies:', req.cookies);
+    console.log('[AuthDebug] E2E_TEST_MODE:', process.env.E2E_TEST_MODE);
+
     let token;
     const authHeader = req.headers.authorization;
 
@@ -11,16 +15,18 @@ export const verifyFirebaseToken = async (req, res, next) => {
     }
 
     if (!token) {
-        // If it's an API call, return JSON. If it's a view render request (e.g. /admin), redirect to login?
-        // For now, consistent JSON 401 is safer for API. 
-        // Admin views should handle this by redirection middleware or client-side check.
-        // But since we are strictly middleware here:
-        return res.status(401).json({ error: 'Unauthorized: No token provided' });
+        return res.status(401).json({
+            success: false,
+            status: 'error',
+            message: 'Unauthorized: No token provided'
+        });
     }
 
     // MOCK FOR E2E VERIFICATION ONLY
     if (process.env.E2E_TEST_MODE === 'true') {
+        console.log('[AuthDebug] Checking E2E token:', token);
         if (token === 'e2e-magic-token') {
+            console.log('[AuthDebug] E2E Token Matched! Calling next()');
             req.user = {
                 uid: 'test-e2e-user',
                 email: 'test@example.com',
@@ -43,11 +49,14 @@ export const verifyFirebaseToken = async (req, res, next) => {
         req.user = {
             uid: decodedToken.uid,
             email: decodedToken.email,
-            // Role will be fetched in RBAC middleware or we can attach it here if using Custom Claims
         };
         next();
     } catch (error) {
         console.error('Error verifying Firebase token:', error);
-        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+        return res.status(401).json({
+            success: false,
+            status: 'error',
+            message: 'Unauthorized: Invalid token'
+        });
     }
 };

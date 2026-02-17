@@ -37,7 +37,7 @@ function App() {
             if (filters.includeDeleted) params.append('includeDeleted', 'true');
 
             const response = await api.get(`/tasks?${params.toString()}`);
-            setTasks(response.data);
+            setTasks(response.data.data || []);
         } catch (err) {
             setError(err.message || 'Failed to fetch tasks');
         } finally {

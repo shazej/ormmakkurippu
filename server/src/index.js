@@ -77,6 +77,9 @@ import groupsRoutes from './features/groups/groups.routes.js'; // Added
 import privacyRoutes from './features/privacy/privacy.routes.js'; // Added
 import complianceRoutes from './features/compliance/compliance.routes.js'; // Added
 
+import sharedRoutes from './features/tasks/shared.routes.js'; // Added
+import { TasksService } from './features/tasks/tasks.service.js'; // Added
+
 app.use('/api/account/linked-accounts', linkedAccountsRoutes);
 app.use('/api/account/close', accountClosureRoutes);
 app.use('/api/account/activity', activityRoutes); // Added
@@ -84,6 +87,8 @@ app.use('/api/account/groups', groupsRoutes); // Added
 app.use('/api/privacy', privacyRoutes); // Added
 app.use('/api/compliance', complianceRoutes); // Added
 app.use('/api/account', accountRoutes);
+app.use('/api/shared', sharedRoutes); // Added
+
 // Admin Routes
 app.use('/admin', adminRoutes);
 
@@ -92,6 +97,19 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
+
+// Reminder Loop (Simple In-Memory)
+setInterval(async () => {
+    try {
+        const tasksService = new TasksService();
+        const sent = await tasksService.processReminders();
+        if (sent.length > 0) {
+            console.log(`[Reminders] Sent ${sent.length} reminders:`, sent.map(t => `${t.id} (${t.title})`));
+        }
+    } catch (e) {
+        console.error('[Reminders] Error processing:', e);
+    }
+}, 60000); // Check every 60s
 
 // Health Check
 app.get('/', (req, res) => {
@@ -152,6 +170,20 @@ app.get('/auth/google/callback', async (req, res) => {
 });
 
 // Endpoint for Frontend (React-OAuth) code exchange
+if (process.env.E2E_TEST_MODE === 'true') {
+    app.get('/api/auth/demo-login', (req, res) => {
+        console.log('🧪 E2E_TEST_MODE: Auto-login triggered');
+        // Set the session cookie that the middleware checks
+        res.cookie('session', 'e2e-magic-token', {
+            httpOnly: false, // Allow client JS to read if needed (though middleware checks cookie)
+            path: '/',
+            maxAge: 3600000
+        });
+        // Redirect back to client root
+        res.redirect('http://localhost:5173');
+    });
+}
+
 app.post('/api/auth/google', async (req, res) => {
     try {
         const { code } = req.body;

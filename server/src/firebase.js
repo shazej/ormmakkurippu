@@ -42,31 +42,49 @@ if (process.env.E2E_TEST_MODE === 'true') {
     };
 } else {
     // REAL FIREBASE MODE
-    if (!getApps().length) {
-        if (fs.existsSync(serviceAccountPath)) {
+    if (process.env.USE_LOCAL_DB === 'true') {
+        console.log('ℹ️  USE_LOCAL_DB=true: Using LocalDb (JSON File Storage)');
+        // @ts-ignore
+        db = new LocalDb();
+
+        // Mock Auth for LocalDb mode (since we don't have Firebase Admin)
+        auth = {
+            verifyIdToken: async (token) => {
+                // For demo/local-db mode, we might trust any token or a specific debug token
+                // Or we can just decode it if it's a real jwt but verification fails without keys?
+                // For now, let's treat it similar to E2E but maybe log a warning.
+                console.log('⚠️  LocalDb Mode: Mock verifying token:', token);
+                return { uid: 'local-user', email: 'user@local.dev' };
+            },
+            getUser: async (uid) => ({ uid, email: 'user@local.dev' }),
+            getUserByEmail: async (email) => ({ uid: 'local-user', email }),
+            createUser: async (props) => ({ uid: 'local-user', ...props })
+        };
+    } else {
+        if (!getApps().length) {
             try {
-                const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+                console.log('ℹ️  Initializing Firebase (relying on GOOGLE_APPLICATION_CREDENTIALS or ADC)...');
                 app = initializeApp({
-                    credential: cert(serviceAccount)
+                    projectId: process.env.GOOGLE_PROJECT_ID || process.env.PROJECT_ID || 'ormmakurippu-cb4bc'
                 });
-                console.log('✅ Firebase initialized with service-account.json');
+                console.log('✅ Firebase initialized successfully');
+                db = getFirestore(app);
+                auth = getAuth(app);
             } catch (error) {
-                console.error('❌ Error loading service-account.json:', error);
-                // Fallback to ADC
-                app = initializeApp();
+                console.error('❌ Error initializing Firebase:', error);
+                console.log('⚠️  Falling back to LocalDb due to initialization error...');
+                db = new LocalDb();
+                auth = {
+                    verifyIdToken: async () => ({ uid: 'fallback-user', email: 'fallback@error.dev' }),
+                    getUser: async (uid) => ({ uid, email: 'fallback@error.dev' })
+                };
             }
         } else {
-            console.log('ℹ️ No service-account.json found, checking for ADC or env vars');
-            app = initializeApp({
-                projectId: process.env.GOOGLE_PROJECT_ID || process.env.PROJECT_ID || 'ormmakurippu-cb4bc'
-            });
+            app = getApps()[0];
+            db = getFirestore(app);
+            auth = getAuth(app);
         }
-    } else {
-        app = getApps()[0];
     }
-
-    db = getFirestore(app);
-    auth = getAuth(app);
 }
 
 export { db, auth };

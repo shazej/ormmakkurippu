@@ -22,6 +22,25 @@ export class TasksRepository {
             query = query.where('category', '==', filters.category);
         }
 
+        if (filters.shareToken) {
+            query = query.where('shareToken', '==', filters.shareToken);
+        }
+
+        if (filters.reminderDue) {
+            const now = new Date().toISOString();
+            // In a real DB, this adds complexity. For LocalDb, filter() handles it.
+            // For Firestore, we need a composite index or separate query.
+            // We'll assume the repository abstraction handles the "how".
+            // Since LocalDb is used in demo, we'll rely on its filter behavior if we pass a custom op or handled here?
+            // LocalCollection.where supports 'op'.
+            // But here we are building the query.
+            // Let's assume we pass a specific filter object that the repository handles?
+            // The repository methods .where() are likely chainable.
+
+            // For LocalDb/Firestore:
+            query = query.where('reminderAt', '<=', now).where('reminderSent', '!=', true);
+        }
+
         // Sorting
         // Note: multiple orderBys with '!=' filter require composite index in Firestore
         // For simplicity and safety with '!=', we might need to filter 'status' differently

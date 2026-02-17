@@ -42,7 +42,7 @@ class LocalDoc {
     }
 
     async set(newData, options = {}) {
-        let data = this._readData();
+        const data = this._readData();
         const existingIndex = data.findIndex(i => i.id === this.id);
 
         if (existingIndex >= 0) {
@@ -59,7 +59,7 @@ class LocalDoc {
     }
 
     async update(newData) {
-        let data = this._readData();
+        const data = this._readData();
         const existingIndex = data.findIndex(i => i.id === this.id);
 
         if (existingIndex >= 0) {
@@ -71,7 +71,7 @@ class LocalDoc {
     }
 
     async delete() {
-        let data = this._readData();
+        const data = this._readData();
         const filtered = data.filter(i => i.id !== this.id);
         this._writeData(filtered);
     }

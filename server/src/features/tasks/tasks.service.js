@@ -34,7 +34,10 @@ export class TasksService {
             category: data.category || 'General',
             priority: data.priority || 'Medium',
             status: data.status || 'Pending',
-            notes: data.notes || ''
+            notes: data.notes || '',
+            reminderAt: data.reminderAt || null,
+            reminderSent: false,
+            shareToken: null
         };
 
         return this.repository.create(newTask);
@@ -45,7 +48,7 @@ export class TasksService {
         const task = await this.getTask(id, user);
 
         // Whitelist allowed updates
-        const allowedUpdates = ['title', 'description', 'fromName', 'fromPhone', 'category', 'priority', 'status', 'notes'];
+        const allowedUpdates = ['title', 'description', 'fromName', 'fromPhone', 'category', 'priority', 'status', 'notes', 'reminderAt'];
         const updates = {};
 
         Object.keys(data).forEach(key => {
@@ -54,9 +57,39 @@ export class TasksService {
             }
         });
 
+        // Reset reminderSent if reminderAt changes
+        if (updates.reminderAt && updates.reminderAt !== task.reminderAt) {
+            updates.reminderSent = false;
+        }
+
         if (Object.keys(updates).length === 0) return task;
 
         return this.repository.update(id, updates);
+    }
+
+    async shareTask(id, user) {
+        const task = await this.getTask(id, user);
+        // Generate a random token
+        const shareToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        return this.repository.update(id, { shareToken });
+    }
+
+    async getSharedTask(token) {
+        const tasks = await this.repository.find({ shareToken: token });
+        if (tasks.length === 0) throw new AppError('Shared task not found', 404);
+        return tasks[0];
+    }
+
+    async processReminders() {
+        const tasks = await this.repository.find({ reminderDue: true, includeDeleted: false });
+        // Return tasks to be processed by the caller (or process here)
+        // We'll mark them as sent here to avoid double sending
+        const results = [];
+        for (const task of tasks) {
+            await this.repository.update(task.id, { reminderSent: true });
+            results.push(task);
+        }
+        return results;
     }
 
     async deleteTask(id, user) {
