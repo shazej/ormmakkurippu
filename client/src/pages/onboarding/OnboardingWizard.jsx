@@ -87,15 +87,8 @@ export default function OnboardingWizard() {
     };
 
     const handleComplete = async () => {
-        try {
-            await axios.post('http://localhost:4000/api/onboarding/complete', {}, {
-                withCredentials: true
-            });
-            await refreshUser(); // Update context to reflect completed status
-            navigate('/app');
-        } catch (error) {
-            console.error("Failed to complete onboarding", error);
-        }
+        // Just redirect to the welcome step, don't mark as complete yet
+        navigate('/app/onboard/welcome');
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;

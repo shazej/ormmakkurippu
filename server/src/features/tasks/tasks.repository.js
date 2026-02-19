@@ -55,13 +55,14 @@ export class TasksRepository {
     async create(data) {
         // Data contains: title, description... and uid (which is user_id)
         // Also map camelCase to snake_case for Prisma
-        const { uid, assigned_to_email, fromName, fromPhone, reminderAt, reminderSent, ...rest } = data;
+        const { uid, assigned_to_email, fromName, fromPhone, reminderAt, reminderSent, dueDate, ...rest } = data;
 
         const task = await prisma.task.create({
             data: {
                 ...rest,
                 from_name: fromName,
                 from_phone: fromPhone,
+                due_date: dueDate,
                 assigned_to_email, // Explicitly pass if present
                 user_id: uid,
                 // Ensure no null/undefined fields that Prisma doesn't like or rely on defaults
@@ -73,13 +74,14 @@ export class TasksRepository {
     }
 
     async update(id, data) {
-        const { fromName, fromPhone, ...rest } = data;
+        const { fromName, fromPhone, dueDate, ...rest } = data;
         const updateData = {
             ...rest,
             updated_at: new Date()
         };
         if (fromName !== undefined) updateData.from_name = fromName;
         if (fromPhone !== undefined) updateData.from_phone = fromPhone;
+        if (dueDate !== undefined) updateData.due_date = dueDate;
 
         const task = await prisma.task.update({
             where: { id },

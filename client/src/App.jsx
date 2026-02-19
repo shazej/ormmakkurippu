@@ -8,6 +8,8 @@ import CallsPage from './pages/CallsPage';
 import TaskDetailsPage from './pages/TaskDetailsPage';
 import OnboardingWizard from './pages/onboarding/OnboardingWizard';
 
+import WelcomeStep from './pages/onboarding/WelcomeStep';
+
 import LoginPage from './pages/LoginPage';
 import { useLocation } from 'react-router-dom';
 
@@ -20,11 +22,12 @@ function ProtectedRoute({ children }) {
     if (!user) return <Navigate to="/login" replace />;
 
     // Enforce onboarding
-    if (!user.is_onboarded && !location.pathname.startsWith('/onboarding')) {
+    // Allow access to /app/onboard/welcome even if not onboarded
+    if (!user.is_onboarded && !location.pathname.startsWith('/onboarding') && location.pathname !== '/app/onboard/welcome') {
         return <Navigate to="/onboarding" replace />;
     }
 
-    // Redirect to app if already onboarded and trying to access onboarding
+    // Redirect to app if already onboarded and trying to access onboarding (except welcome step)
     if (user.is_onboarded && location.pathname.startsWith('/onboarding')) {
         return <Navigate to="/app" replace />;
     }
@@ -56,8 +59,13 @@ function AppRoutes() {
                 </ProtectedRoute>
             }>
                 <Route index element={<HomePage />} />
+                <Route path="today" element={<HomePage />} />
+                <Route path="upcoming" element={<HomePage />} />
+                <Route path="completed" element={<HomePage />} />
+                <Route path="project/:id" element={<HomePage />} />
                 <Route path="calls" element={<CallsPage />} />
                 <Route path="tasks/:id" element={<TaskDetailsPage />} />
+                <Route path="onboard/welcome" element={<WelcomeStep />} />
             </Route>
 
             {/* Fallback */}

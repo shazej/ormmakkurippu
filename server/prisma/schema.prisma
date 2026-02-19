@@ -234,6 +234,7 @@ model Task {
   category    String    @default("General")
   priority    String    @default("Medium")
   status      String    @default("Pending")
+  due_date    DateTime?
   notes       String?
   
   assigned_to_user_id String?

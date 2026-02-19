@@ -28,7 +28,7 @@ function TaskDetailsPage() {
 
     const handleUpdate = async (updatedData) => {
         try {
-            await axios.put(`/api/tasks/${id}`, updatedData);
+            await axios.patch(`/api/tasks/${id}`, updatedData);
             alert('Task updated successfully');
             fetchTask(); // Refresh data
         } catch (err) {

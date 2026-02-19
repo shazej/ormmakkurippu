@@ -322,8 +322,8 @@ if (process.env.E2E_TEST_MODE === 'true') {
             path: '/',
             maxAge: 3600000
         });
-        // Redirect back to client root
-        res.redirect('http://localhost:3000/app');
+        const clientUrl = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+        res.redirect(`${clientUrl}/app`);
     });
 }
 

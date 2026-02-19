@@ -3,6 +3,7 @@ import { UsersRepository } from '../users/users.repository.js';
 import { AppError } from '../../utils/app-error.js';
 
 import { maskPhone } from '../../utils/phone-utils.js';
+import { ensureTaskAccess } from './task-auth.js';
 
 export class TasksService {
     constructor() {
@@ -34,14 +35,7 @@ export class TasksService {
         if (!task) throw new AppError('Task not found', 404);
 
         // Security Check: Owner OR Assigned
-        const isOwner = task.user_id === user.uid;
-        const isAssigned = task.assigned_to_user_id === user.uid;
-
-        console.log(`[TasksService] getTask Access Check: TaskID=${id}, UserUID=${user.uid}`);
-        console.log(`[TasksService] Owner: ${task.user_id}, Assigned: ${task.assigned_to_user_id}`);
-        console.log(`[TasksService] isOwner=${isOwner}, isAssigned=${isAssigned}`);
-
-        if (!isOwner && !isAssigned) throw new AppError('Forbidden', 403);
+        ensureTaskAccess(task, user);
 
         return this._applyMasking(task, user);
     }
@@ -89,6 +83,7 @@ export class TasksService {
             status: data.status || 'Pending',
             notes: data.notes || '',
             reminderAt: data.reminderAt || null,
+            dueDate: data.dueDate || null,
             reminderSent: false,
             // Assignment
             assigned_to_user_id: assignedToUserId,
@@ -102,25 +97,32 @@ export class TasksService {
         // checks existence and ownership
         const task = await this.getTask(id, user);
 
-        // Security: Only Owner can re-assign? Or Assigned user can update status?
-        // Requirement: "Access Rules: A user can see a task if Owner OR Assigned"
-        // But what about update?
-        // Usually Assigned user can update Status/Notes, but not re-assign?
-        // Let's allow update for both for now, but restrict re-assignment to Owner?
-        // For MVP, we allow both to edit "allowed fields".
+        const isOwner = task.user_id === user.uid;
+        const isAssigned = task.assigned_to_user_id === user.uid;
+
+        if (!isOwner && !isAssigned) {
+            throw new AppError('Forbidden', 403);
+        }
 
         // Whitelist allowed updates
-        const allowedUpdates = ['title', 'description', 'fromName', 'fromPhone', 'category', 'priority', 'status', 'notes', 'reminderAt'];
+        const allowedUpdates = ['title', 'description', 'fromName', 'fromPhone', 'category', 'priority', 'status', 'notes', 'reminderAt', 'due_date'];
         const updates = {};
 
         Object.keys(data).forEach(key => {
             if (allowedUpdates.includes(key) && data[key] !== undefined) {
-                updates[key] = data[key];
+                if (isOwner) {
+                    updates[key] = data[key];
+                } else if (isAssigned) {
+                    // Assignee restricted fields
+                    if (['status', 'notes'].includes(key)) {
+                        updates[key] = data[key];
+                    }
+                }
             }
         });
 
-        // Handle Assignment Update (Only if different)
-        if (data.assignedToEmail !== undefined) {
+        // Handle Assignment Update (Only Owner can re-assign)
+        if (data.assignedToEmail !== undefined && isOwner) {
             if (!data.assignedToEmail) {
                 // Clear assignment
                 updates.assigned_to_user_id = null;
@@ -163,7 +165,13 @@ export class TasksService {
     }
 
     async deleteTask(id, user) {
-        await this.getTask(id, user); // checks existence and ownership
+        const task = await this.getTask(id, user); // checks existence and basic access
+
+        // Strict Owner Check for Deletion
+        if (task.user_id !== user.uid) {
+            throw new AppError('Forbidden: Only the task owner can delete this task', 403);
+        }
+
         return this.repository.softDelete(id);
     }
 }

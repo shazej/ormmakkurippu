@@ -54,6 +54,7 @@ export class TasksController {
                 category: z.string().optional(),
                 notes: z.string().optional(),
                 reminderAt: z.string().datetime().nullable().optional(),
+                dueDate: z.string().datetime().nullable().optional(),
                 assignedToEmail: z.string().email().optional().or(z.literal(''))
             });
 
@@ -98,12 +99,16 @@ export class TasksController {
                 status: z.enum(['Pending', 'In Progress', 'Completed', 'deleted']).optional(),
                 category: z.string().optional(),
                 assignedToEmail: z.string().email().optional().or(z.literal('')),
-                notes: z.string().optional()
+                dueDate: z.string().datetime().nullable().optional(),
+                notes: z.string().optional(),
+                due_date: z.string().datetime().nullable().optional(), // Adding due_date support
+                reminderAt: z.string().datetime().nullable().optional()
             });
 
             const result = schema.safeParse(req.body);
             if (!result.success) return sendError(res, result.error.errors, 400);
 
+            // PATCH: Partial update logic is handled in Service
             const task = await this.service.updateTask(req.params.id, req.user, result.data);
             sendSuccess(res, task);
         } catch (error) {

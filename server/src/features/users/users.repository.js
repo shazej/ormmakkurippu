@@ -27,11 +27,12 @@ export class UsersRepository {
         });
     }
 
-    async createOrUpdateGoogleUser(googleProfile) {
+    async createOrUpdateGoogleUser(googleProfile, tx) {
+        const db = tx || prisma;
         const { google_uid, email, name, picture, email_verified } = googleProfile;
 
         // 1. Try to find by Google UID
-        let user = await prisma.user.findUnique({
+        let user = await db.user.findUnique({
             where: { google_uid },
             include: { allowed_ips: true, geofence: true }
         });
@@ -39,7 +40,7 @@ export class UsersRepository {
         if (user) {
             // Update profile if changed (optional, but good for keeping sync)
             if (user.display_name !== name || user.avatar_url !== picture) {
-                user = await prisma.user.update({
+                user = await db.user.update({
                     where: { id: user.id },
                     data: {
                         display_name: name || user.display_name,
@@ -52,14 +53,14 @@ export class UsersRepository {
         }
 
         // 2. Try to find by Email (Legacy/Manual linkage)
-        const existingByEmail = await prisma.user.findUnique({
+        const existingByEmail = await db.user.findUnique({
             where: { primary_email_id: email },
             include: { allowed_ips: true, geofence: true }
         });
 
         if (existingByEmail) {
             // Link Google UID
-            user = await prisma.user.update({
+            user = await db.user.update({
                 where: { id: existingByEmail.id },
                 data: {
                     google_uid,
@@ -70,7 +71,7 @@ export class UsersRepository {
             });
         } else {
             // 3. Create New User
-            user = await prisma.user.create({
+            user = await db.user.create({
                 data: {
                     google_uid,
                     primary_email_id: email,
@@ -90,7 +91,7 @@ export class UsersRepository {
             });
 
             // Link pending tasks
-            await prisma.task.updateMany({
+            await db.task.updateMany({
                 where: { assigned_to_email: email },
                 data: {
                     assigned_to_user_id: user.id,

@@ -1,4 +1,6 @@
 import { auth, db } from '../../firebase.js';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 import { AppError } from '../../utils/app-error.js';
 import { logAudit } from '../../admin/audit.js';
 import { google } from 'googleapis';
@@ -65,14 +67,53 @@ export class AuthService {
             const { data } = await oauth2.userinfo.get();
             const { id: google_uid, email, name, picture, verified_email } = data;
 
-            // Create or Update User
-            const user = await usersRepo.createOrUpdateGoogleUser({
-                google_uid,
-                email,
-                name,
-                picture,
-                email_verified: verified_email
+            // Create or Update User & Activate Invites (Atomic)
+            const { user, activatedInvites } = await prisma.$transaction(async (tx) => {
+                const user = await usersRepo.createOrUpdateGoogleUser({
+                    google_uid,
+                    email,
+                    name,
+                    picture,
+                    email_verified: verified_email
+                }, tx);
+
+                // Find pending invites
+                const pendingInvites = await tx.workspaceMember.findMany({
+                    where: {
+                        email: email,
+                        status: 'PENDING'
+                    }
+                });
+
+                if (pendingInvites.length > 0) {
+                    await tx.workspaceMember.updateMany({
+                        where: {
+                            email: email,
+                            status: 'PENDING'
+                        },
+                        data: {
+                            status: 'ACTIVE',
+                            user_id: user.id,
+                            joined_at: new Date()
+                        }
+                    });
+                }
+
+                return { user, activatedInvites: pendingInvites };
             });
+
+            // Audit Logs for Activation
+            if (activatedInvites.length > 0) {
+                for (const invite of activatedInvites) {
+                    await logAudit(
+                        { uid: user.id, email: user.primary_email_id, role: user.role },
+                        'WORKSPACE_INVITE_ACCEPTED',
+                        'workspace',
+                        invite.workspace_id,
+                        { memberId: invite.id }
+                    );
+                }
+            }
 
             // Ensure Default Workspace
             await workspacesService.ensureDefaultWorkspace(user.id, email);
