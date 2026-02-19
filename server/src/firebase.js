@@ -9,83 +9,121 @@ import { LocalDb } from './local-db.js';
 dotenv.config();
 
 let app;
-
-// Try to load service-account.json if it exists, otherwise rely on GOOGLE_APPLICATION_CREDENTIALS or default
-const serviceAccountPath = path.join(process.cwd(), 'service-account.json');
-
 let db;
 let auth;
 
-if (process.env.E2E_TEST_MODE === 'true') {
-    console.log('🧪 E2E_TEST_MODE: Using LocalDb Mock');
-    // @ts-ignore
-    db = new LocalDb();
+// Helper for safe logging
+const logStartup = (provider, mode, status) => {
+    console.log(JSON.stringify({
+        event: 'startup_db_config',
+        provider,
+        mode,
+        status,
+        timestamp: new Date().toISOString()
+    }));
+};
 
-    // Mock Auth for E2E mode
-    auth = {
-        verifyIdToken: async (token) => {
-            console.log('🧪 E2E_TEST_MODE: Mock Verifying Token:', token);
-            if (token === 'e2e-magic-token') { // Matches mock token from index.js
-                return { uid: 'test-e2e-user', email: 'test@example.com' };
-            }
-            throw new Error('Invalid mock token');
-        },
-        getUser: async (uid) => ({ uid, email: 'test@example.com' }),
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
 
-        // Added mocks for Phase 2 features
-        generatePasswordResetLink: async (email) => `http://localhost:4000/mock/reset-password?email=${email}`,
-        generateEmailVerificationLink: async (email) => `http://localhost:4000/mock/verify-email?email=${email}`,
-        updateUser: async (uid, properties) => {
-            console.log(`[Mock Auth] Updated user ${uid}:`, properties);
-            return { uid, ...properties };
-        }
-    };
-} else {
-    // REAL FIREBASE MODE
-    if (process.env.USE_LOCAL_DB === 'true') {
-        console.log('ℹ️  USE_LOCAL_DB=true: Using LocalDb (JSON File Storage)');
-        // @ts-ignore
-        db = new LocalDb();
-
-        // Mock Auth for LocalDb mode (since we don't have Firebase Admin)
-        auth = {
-            verifyIdToken: async (token) => {
-                // For demo/local-db mode, we might trust any token or a specific debug token
-                // Or we can just decode it if it's a real jwt but verification fails without keys?
-                // For now, let's treat it similar to E2E but maybe log a warning.
-                console.log('⚠️  LocalDb Mode: Mock verifying token:', token);
-                return { uid: 'local-user', email: 'user@local.dev' };
-            },
-            getUser: async (uid) => ({ uid, email: 'user@local.dev' }),
-            getUserByEmail: async (email) => ({ uid: 'local-user', email }),
-            createUser: async (props) => ({ uid: 'local-user', ...props })
-        };
-    } else {
+const initializeFirestoreWithRetry = async (retries = 0) => {
+    try {
         if (!getApps().length) {
-            try {
-                console.log('ℹ️  Initializing Firebase (relying on GOOGLE_APPLICATION_CREDENTIALS or ADC)...');
-                app = initializeApp({
-                    projectId: process.env.GOOGLE_PROJECT_ID || process.env.PROJECT_ID || 'ormmakurippu-cb4bc'
-                });
-                console.log('✅ Firebase initialized successfully');
-                db = getFirestore(app);
-                auth = getAuth(app);
-            } catch (error) {
-                console.error('❌ Error initializing Firebase:', error);
-                console.log('⚠️  Falling back to LocalDb due to initialization error...');
-                db = new LocalDb();
-                auth = {
-                    verifyIdToken: async () => ({ uid: 'fallback-user', email: 'fallback@error.dev' }),
-                    getUser: async (uid) => ({ uid, email: 'fallback@error.dev' })
-                };
+            const options = {
+                projectId: process.env.GOOGLE_PROJECT_ID || process.env.PROJECT_ID || 'ormmakurippu-cb4bc'
+            };
+
+            // Optional: Load service account if available and not using ADC
+            const serviceAccountPath = path.join(process.cwd(), 'service-account.json');
+            if (fs.existsSync(serviceAccountPath)) {
+                // We let ADC handle it if possible, but if file exists we could use it. 
+                // Standard practice for Cloud Run is ADC. keeping simple.
             }
+
+            app = initializeApp(options);
         } else {
             app = getApps()[0];
-            db = getFirestore(app);
-            auth = getAuth(app);
+        }
+
+        const firestore = getFirestore(app);
+        // Test connection
+        await firestore.listCollections();
+
+        return {
+            db: firestore,
+            auth: getAuth(app)
+        };
+    } catch (error) {
+        if (retries < MAX_RETRIES) {
+            console.warn(`Firestore initialization attempt ${retries + 1} failed. Retrying...`);
+            await new Promise(res => setTimeout(res, RETRY_DELAY));
+            return initializeFirestoreWithRetry(retries + 1);
+        }
+        throw error;
+    }
+};
+
+const init = async () => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const useLocalDb = process.env.USE_LOCAL_DB === 'true';
+
+    // 1. Forced LocalDb Mode
+    if (useLocalDb) {
+        logStartup('localdb', process.env.NODE_ENV || 'development', 'forced_local');
+        console.log('ℹ️  USE_LOCAL_DB=true: Using LocalDb (JSON File Storage)');
+        db = new LocalDb();
+        auth = getMockAuth('local-user');
+        return;
+    }
+
+    // 2. Firestore Mode
+    try {
+        console.log('ℹ️  Attempting to initialize Firestore...');
+        const firebaseServices = await initializeFirestoreWithRetry();
+        db = firebaseServices.db;
+        auth = firebaseServices.auth;
+        logStartup('firestore', process.env.NODE_ENV || 'development', 'success');
+        console.log('✅ Firestore initialized successfully');
+    } catch (error) {
+        console.error('❌ Error initializing Firestore:', error.message);
+
+        // 3. Fallback Logic
+        if (isProduction) {
+            console.error('🚨 CRITICAL: Firestore failed in PRODUCTION. Failing fast.');
+            logStartup('firestore', 'production', 'failed_fatal');
+            process.exit(1); // Fail fast in production
+        } else {
+            console.warn('⚠️  Firestore failed. Falling back to LocalDb (Non-Production Safe Mode).');
+            logStartup('localdb', process.env.NODE_ENV || 'development', 'fallback');
+            db = new LocalDb();
+            auth = getMockAuth('fallback-user');
         }
     }
-}
+};
+
+// Mock Auth Helper
+const getMockAuth = (uidPrefix) => ({
+    verifyIdToken: async (token) => {
+        console.log(`[MockAuth] Verifying token: ${token ? '****' : 'null'}`);
+        return { uid: `${uidPrefix}-123`, email: `${uidPrefix}@example.com` };
+    },
+    getUser: async (uid) => ({ uid, email: `${uidPrefix}@example.com` }),
+    getUserByEmail: async (email) => ({ uid: `${uidPrefix}-123`, email }),
+    createUser: async (props) => ({ uid: `${uidPrefix}-${Date.now()}`, ...props }),
+    generatePasswordResetLink: async (email) => `http://localhost:4000/mock/reset?email=${email}`,
+    generateEmailVerificationLink: async (email) => `http://localhost:4000/mock/verify?email=${email}`,
+    updateUser: async (uid, props) => ({ uid, ...props })
+});
+
+// Top-level await is supported in modules, but to be safe with all bundlers/envs, 
+// we initialize synchronously where possible or handle the promise in app startup.
+// Since we export db/auth, we need them to be ready. 
+// For this architecture, we'll run init() immediately but exports might be checked after.
+// NOTE: This pattern requires the app to wait for DB. 'index.js' imports this.
+// We will export a promise or rely on synchronous/lazy instantiation if needed.
+// Given the existing structure, `db` and `auth` are exported directly. 
+// We will switch to exporting a `getDb` or `initDb` function, OR block top level.
+// Blocking top level await:
+await init();
 
 export { db, auth };
-

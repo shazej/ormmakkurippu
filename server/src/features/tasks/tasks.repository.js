@@ -1,100 +1,101 @@
-import { db } from '../../firebase.js';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
 export class TasksRepository {
-    constructor() {
-        this.collection = db.collection('tasks');
-    }
+    async find(filters = {}, pagination = {}, sort = { field: 'created_at', direction: 'desc' }) {
+        const where = {
+            deleted_at: filters.includeDeleted ? undefined : null
+        };
 
-    async find(filters = {}, pagination = {}, sort = { created_at: 'desc' }) {
-        let query = this.collection;
-
-        // Default Filter: exclude soft-deleted unless explicitly requested
-        if (!filters.includeDeleted) {
-            query = query.where('status', '!=', 'deleted');
-        }
-
-        // Apply other filters
+        // Access Control & Filters
         if (filters.uid) {
-            query = query.where('uid', '==', filters.uid);
+            // OR logic: Task is owned by user OR assigned to user
+            where.OR = [
+                { user_id: filters.uid },
+                { assigned_to_user_id: filters.uid }
+            ];
         }
 
-        if (filters.category) {
-            query = query.where('category', '==', filters.category);
-        }
+        if (filters.category) where.category = filters.category;
 
-        if (filters.shareToken) {
-            query = query.where('shareToken', '==', filters.shareToken);
-        }
+        const orderBy = {};
+        orderBy[sort.field || 'created_at'] = sort.direction || 'desc';
 
-        if (filters.reminderDue) {
-            const now = new Date().toISOString();
-            // In a real DB, this adds complexity. For LocalDb, filter() handles it.
-            // For Firestore, we need a composite index or separate query.
-            // We'll assume the repository abstraction handles the "how".
-            // Since LocalDb is used in demo, we'll rely on its filter behavior if we pass a custom op or handled here?
-            // LocalCollection.where supports 'op'.
-            // But here we are building the query.
-            // Let's assume we pass a specific filter object that the repository handles?
-            // The repository methods .where() are likely chainable.
+        const tasks = await prisma.task.findMany({
+            where,
+            orderBy,
+            take: pagination.limit ? Number(pagination.limit) : undefined,
+            skip: pagination.offset ? Number(pagination.offset) : undefined,
+            include: {
+                user: { select: { id: true, primary_email_id: true } },
+                assigned_to: { select: { id: true, primary_email_id: true } }
+            }
+        });
 
-            // For LocalDb/Firestore:
-            query = query.where('reminderAt', '<=', now).where('reminderSent', '!=', true);
-        }
-
-        // Sorting
-        // Note: multiple orderBys with '!=' filter require composite index in Firestore
-        // For simplicity and safety with '!=', we might need to filter 'status' differently
-        // or ensure the index exists.
-        // If 'status' != 'deleted' is used, Firestore requires 'status' to be the first orderBy field.
-        // However, we usually want to order by 'created_at'.
-        // To avoid complex index requirements for this MVP step:
-        // We will assume 'deletedAt' == null is better if we can query it?
-        // But the previous implementation used 'status' != 'deleted'.
-        // Let's stick to the previous pattern but be aware of index needs.
-
-        query = query.orderBy(sort.field || 'created_at', sort.direction || 'desc');
-
-        // Pagination
-        if (pagination.limit) {
-            query = query.limit(pagination.limit);
-        }
-        if (pagination.offset) {
-            query = query.offset(pagination.offset);
-        }
-
-        const snapshot = await query.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Map to flat structure for backward compatibility
+        return tasks.map(t => ({
+            ...t,
+            uid: t.user_id,
+            assigned_to_email: t.assigned_to ? t.assigned_to.primary_email_id : t.assigned_to_email
+        }));
     }
 
     async findById(id) {
-        const doc = await this.collection.doc(id).get();
-        if (!doc.exists) return null;
-        return { id: doc.id, ...doc.data() };
+        const task = await prisma.task.findUnique({
+            where: { id },
+            include: {
+                user: { select: { id: true, primary_email_id: true } },
+                assigned_to: { select: { id: true, primary_email_id: true } }
+            }
+        });
+        if (!task) return null;
+        return { ...task, uid: task.user_id };
     }
 
     async create(data) {
-        const docRef = await this.collection.add({
-            ...data,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            deletedAt: null
+        // Data contains: title, description... and uid (which is user_id)
+        // Also map camelCase to snake_case for Prisma
+        const { uid, assigned_to_email, fromName, fromPhone, reminderAt, reminderSent, ...rest } = data;
+
+        const task = await prisma.task.create({
+            data: {
+                ...rest,
+                from_name: fromName,
+                from_phone: fromPhone,
+                assigned_to_email, // Explicitly pass if present
+                user_id: uid,
+                // Ensure no null/undefined fields that Prisma doesn't like or rely on defaults
+                created_at: new Date(),
+                updated_at: new Date()
+            }
         });
-        return { id: docRef.id, ...data };
+        return { ...task, uid: task.user_id };
     }
 
     async update(id, data) {
-        await this.collection.doc(id).update({
-            ...data,
-            updated_at: new Date().toISOString()
+        const { fromName, fromPhone, ...rest } = data;
+        const updateData = {
+            ...rest,
+            updated_at: new Date()
+        };
+        if (fromName !== undefined) updateData.from_name = fromName;
+        if (fromPhone !== undefined) updateData.from_phone = fromPhone;
+
+        const task = await prisma.task.update({
+            where: { id },
+            data: updateData
         });
-        return { id, ...data };
+        return { ...task, uid: task.user_id };
     }
 
     async softDelete(id) {
-        await this.collection.doc(id).update({
-            status: 'deleted',
-            deletedAt: new Date().toISOString()
+        const task = await prisma.task.update({
+            where: { id },
+            data: {
+                status: 'deleted',
+                deleted_at: new Date()
+            }
         });
-        return { id, status: 'deleted' };
+        return { ...task, uid: task.user_id };
     }
 }

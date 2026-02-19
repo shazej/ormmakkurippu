@@ -8,7 +8,7 @@ export function getOAuthClient() {
     return new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
+        'postmessage' // Critical for React-OAuth code flow
     );
 }
 
@@ -53,8 +53,11 @@ export async function uploadToDrive(authClient, file, folderName = 'ormmakurippu
 
     // 2. Upload File
     try {
+        // Sanitize filename
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+
         const fileMetadata = {
-            name: file.originalname,
+            name: safeName,
             parents: [folderId],
         };
 

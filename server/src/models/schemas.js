@@ -12,6 +12,7 @@ export const UserSchema = z.object({
     password_updated_at: TimestampSchema,
     primary_email_id: z.string().optional(),
     marketing_mobile: z.string().nullable().optional(),
+    use_case: z.enum(['myself', 'team']).optional(),
     preferences: z.record(z.any()).default({}), // formatted json
     created_at: TimestampSchema,
     updated_at: TimestampSchema

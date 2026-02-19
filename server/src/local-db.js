@@ -1,12 +1,34 @@
 import fs from 'fs';
 import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+// Configurable path with safe default
+const DATA_DIR = process.env.LOCAL_DB_PATH
+    ? path.resolve(process.env.LOCAL_DB_PATH)
+    : path.join(process.cwd(), 'data');
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+    try {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+    } catch (err) {
+        console.error(`CRITICAL: Could not create data directory at ${DATA_DIR}`, err);
+        throw err;
+    }
 }
+
+// Simple in-memory mutex for file writing
+const writeLocks = new Map();
+
+const acquireLock = async (filePath) => {
+    while (writeLocks.get(filePath)) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    writeLocks.set(filePath, true);
+};
+
+const releaseLock = (filePath) => {
+    writeLocks.delete(filePath);
+};
 
 class LocalDoc {
     constructor(collectionName, id) {
@@ -15,21 +37,47 @@ class LocalDoc {
     }
 
     _getFilePath() {
-        return path.join(DATA_DIR, `${this.collectionName}.json`);
+        // Sanitize collection name to prevent traversal
+        const safeName = this.collectionName.replace(/[^a-zA-Z0-9_-]/g, '');
+        return path.join(DATA_DIR, `${safeName}.json`);
     }
 
     _readData() {
+        const filePath = this._getFilePath();
         try {
-            const filePath = this._getFilePath();
             if (!fs.existsSync(filePath)) return [];
-            return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            const content = fs.readFileSync(filePath, 'utf8');
+            if (!content.trim()) return []; // Handle empty file
+            return JSON.parse(content);
         } catch (e) {
-            return [];
+            console.error(`[LocalDb] Corrupt or unreadable file: ${filePath}`, e);
+            // Backup corrupt file
+            if (fs.existsSync(filePath)) {
+                const backupPath = `${filePath}.corrupt.${Date.now()}`;
+                fs.copyFileSync(filePath, backupPath);
+                console.warn(`[LocalDb] Backed up corrupt file to ${backupPath}`);
+            }
+            return []; // Return empty to allow recovery/continued operation
         }
     }
 
-    _writeData(data) {
-        fs.writeFileSync(this._getFilePath(), JSON.stringify(data, null, 2), 'utf8');
+    async _writeData(data) {
+        const filePath = this._getFilePath();
+        const tempPath = `${filePath}.tmp.${Date.now()}.${Math.random().toString(36).substring(7)}`;
+
+        await acquireLock(filePath);
+        try {
+            // Write to temp file first
+            fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8');
+            // Atomic rename
+            fs.renameSync(tempPath, filePath);
+        } catch (err) {
+            console.error(`[LocalDb] Write failed for ${filePath}`, err);
+            if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); // Cleanup
+            throw err;
+        } finally {
+            releaseLock(filePath);
+        }
     }
 
     async get() {
@@ -55,7 +103,7 @@ class LocalDoc {
             data.push({ ...newData, id: this.id });
         }
 
-        this._writeData(data);
+        await this._writeData(data);
     }
 
     async update(newData) {
@@ -64,7 +112,7 @@ class LocalDoc {
 
         if (existingIndex >= 0) {
             data[existingIndex] = { ...data[existingIndex], ...newData };
-            this._writeData(data);
+            await this._writeData(data);
         } else {
             throw new Error('Document not found');
         }
@@ -73,7 +121,7 @@ class LocalDoc {
     async delete() {
         const data = this._readData();
         const filtered = data.filter(i => i.id !== this.id);
-        this._writeData(filtered);
+        await this._writeData(filtered);
     }
 }
 
@@ -86,7 +134,8 @@ class LocalCollection {
     }
 
     _getFilePath() {
-        return path.join(DATA_DIR, `${this.name}.json`);
+        const safeName = this.name.replace(/[^a-zA-Z0-9_-]/g, '');
+        return path.join(DATA_DIR, `${safeName}.json`);
     }
 
     _clone() {
@@ -125,26 +174,39 @@ class LocalCollection {
     async add(data) {
         const id = Math.random().toString(36).substring(2, 15);
         const newDoc = new LocalDoc(this.name, id);
-        await newDoc.set(data);
+        // Ensure ID is in data if not present
+        const docData = { ...data, id };
+        await newDoc.set(docData);
         return newDoc;
     }
 
     async get() {
         let data = [];
+        const filePath = this._getFilePath();
+
         try {
-            const filePath = this._getFilePath();
             if (fs.existsSync(filePath)) {
-                data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                const content = fs.readFileSync(filePath, 'utf8');
+                if (content.trim()) {
+                    data = JSON.parse(content);
+                }
             }
         } catch (e) {
+            console.error(`[LocalDb] Error reading collection ${this.name}`, e);
             data = [];
         }
 
         // Apply filters
         for (const filter of this.filters) {
             data = data.filter(item => {
-                if (filter.op === '==') return item[filter.field] === filter.value;
-                if (filter.op === '!=') return item[filter.field] !== filter.value;
+                const itemVal = item[filter.field];
+                if (filter.op === '==') return itemVal === filter.value;
+                if (filter.op === '!=') return itemVal !== filter.value;
+                if (filter.op === '>') return itemVal > filter.value;
+                if (filter.op === '<') return itemVal < filter.value;
+                if (filter.op === '>=') return itemVal >= filter.value;
+                if (filter.op === '<=') return itemVal <= filter.value;
+                if (filter.op === 'array-contains') return Array.isArray(itemVal) && itemVal.includes(filter.value);
                 return true;
             });
         }
@@ -152,8 +214,13 @@ class LocalCollection {
         // Apply sorts
         for (const sort of this.sorts) {
             data.sort((a, b) => {
-                const valA = a[sort.field] || 0;
-                const valB = b[sort.field] || 0;
+                const valA = a[sort.field];
+                const valB = b[sort.field];
+
+                // Handle undefined/null (push to end)
+                if (valA == null) return 1;
+                if (valB == null) return -1;
+
                 if (typeof valA === 'string' && typeof valB === 'string') {
                     if (sort.dir === 'desc') return valB.localeCompare(valA);
                     return valA.localeCompare(valB);
@@ -175,7 +242,9 @@ class LocalCollection {
 
         return {
             docs,
-            empty: docs.length === 0
+            empty: docs.length === 0,
+            size: docs.length,
+            forEach: (cb) => docs.forEach(cb)
         };
     }
 }

@@ -13,16 +13,28 @@ enum Role {
   MANAGER
 }
 
+enum UseCase {
+  myself
+  team
+}
+
 model User {
   id                  String    @id @default(uuid())
+  google_uid          String?   @unique // Link to Google Auth
   password_hash       String?   // Optional for social-only users
   password_updated_at DateTime?
-  primary_email_id    String?
+  primary_email_id    String?   @unique // Ensure unique email
   marketing_mobile    String?
+  use_case            UseCase?
   preferences         Json?     @default("{}")
   role                Role      @default(USER)
   created_at          DateTime  @default(now())
+  onboarding_step     Int       @default(1)
+  is_onboarded        Boolean   @default(false)
   updated_at          DateTime  @updatedAt
+  display_name        String?
+  avatar_url          String?
+  default_workspace_id String?
 
   emails              UserEmail[]
   mfa_methods         MfaMethod[]
@@ -35,9 +47,15 @@ model User {
   notification_settings NotificationSettings?
   audit_logs          AuditLog[]
   tasks               Task[]
+  assigned_tasks      Task[]    @relation("AssignedTasks")
   linked_accounts     LinkedAccount[]
   owned_groups        Group[]
   group_memberships   GroupMember[]
+  contacts            Contact[]
+  call_logs           CallLog[]
+  owned_workspaces    Workspace[]
+  workspace_memberships WorkspaceMember[]
+  sent_invites        WorkspaceInvite[]
 
   @@map("users")
 }
@@ -217,14 +235,135 @@ model Task {
   priority    String    @default("Medium")
   status      String    @default("Pending")
   notes       String?
+  
+  assigned_to_user_id String?
+  assigned_to_email   String?   // For pending invites
+
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
   deleted_at  DateTime?
 
   user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  assigned_to User?     @relation("AssignedTasks", fields: [assigned_to_user_id], references: [id])
+  call_log    CallLog?  @relation(fields: [related_call_log_id], references: [id])
+  contact     Contact?  @relation(fields: [related_contact_id], references: [id])
+  related_call_log_id String?
+  related_contact_id  String?
+  caller_phone_e164   String?   // Denormalized for display
 
   @@index([user_id])
+  @@index([assigned_to_user_id])
   @@map("tasks")
+}
+
+model Contact {
+  id            String   @id @default(uuid())
+  owner_user_id String
+  name          String?
+  phone_e164    String   // E.164 format +1234567890
+  email         String?
+  company       String?
+  tags          String[] @default([])
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  owner         User     @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+  call_logs     CallLog[]
+  tasks         Task[]
+
+  @@unique([owner_user_id, phone_e164])
+  @@index([owner_user_id])
+  @@map("contacts")
+}
+
+model CallLog {
+  id            String   @id @default(uuid())
+  owner_user_id String
+  contact_id    String?
+  caller_phone_e164 String
+  caller_name   String?
+  direction     String   // "INCOMING", "OUTGOING"
+  call_time     DateTime @default(now())
+  duration_sec  Int?
+  notes         String?
+  source        String   @default("MANUAL") // "MANUAL", "WEBHOOK", "IMPORT"
+  created_at    DateTime @default(now())
+
+  owner         User     @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+  contact       Contact? @relation(fields: [contact_id], references: [id])
+  tasks         Task[]
+
+  @@index([owner_user_id])
+  @@index([caller_phone_e164])
+  @@map("call_logs")
+}
+
+model Workspace {
+  id            String   @id @default(uuid())
+  owner_user_id String
+  name          String
+  domain        String?  // For auto-join
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  owner         User              @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+  members       WorkspaceMember[]
+  invites       WorkspaceInvite[]
+
+  @@map("workspaces")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum WorkspaceMemberStatus {
+  PENDING
+  ACTIVE
+  DECLINED
+}
+
+model WorkspaceMember {
+  id           String                @id @default(uuid())
+  workspace_id String
+  user_id      String?               // Nullable for pending invites by email
+  email        String                // Always required for invites
+  role         WorkspaceRole         @default(MEMBER)
+  status       WorkspaceMemberStatus @default(PENDING)
+  joined_at    DateTime?
+  created_at   DateTime              @default(now())
+
+  workspace    Workspace             @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  user         User?                 @relation(fields: [user_id], references: [id])
+
+  @@unique([workspace_id, email])
+  @@index([user_id])
+  @@map("workspace_members")
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model WorkspaceInvite {
+  id                 String       @id @default(uuid())
+  workspace_id       String
+  email              String
+  invited_by_user_id String
+  status             InviteStatus @default(PENDING)
+  created_at         DateTime     @default(now())
+
+  workspace          Workspace    @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  invited_by         User         @relation(fields: [invited_by_user_id], references: [id])
+
+  @@index([workspace_id])
+  @@index([email])
+  @@map("workspace_invites")
 }
 
 model LinkedAccount {

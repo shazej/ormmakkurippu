@@ -36,4 +36,27 @@ export class AuthController {
             sendError(res, error);
         }
     }
+
+    async googleLogin(req, res) {
+        try {
+            const { code } = req.body;
+            if (!code) throw new Error('Authorization code is required');
+
+            const result = await this.service.loginWithGoogle(code);
+
+            // Set HTTP-only cookie for session security
+            if (result.tokens.id_token) {
+                res.cookie('session', result.tokens.id_token, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'lax',
+                    maxAge: 3600000 // 1 hour
+                });
+            }
+
+            sendSuccess(res, result);
+        } catch (error) {
+            sendError(res, error, 401);
+        }
+    }
 }
