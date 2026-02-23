@@ -12,6 +12,7 @@ export class TasksController {
         try {
             const filters = {
                 includeDeleted: req.query.includeDeleted === 'true',
+                search: req.query.search,
                 ...req.query
             };
             // Pagination handling if needed, usually passed via query or middleware
@@ -21,6 +22,23 @@ export class TasksController {
             sendSuccess(res, tasks);
         } catch (error) {
             console.error('[TasksController] getTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    }
+
+    getAssignedTasks = async (req, res, next) => {
+        try {
+            const filters = {
+                includeDeleted: req.query.includeDeleted === 'true',
+                ...req.query
+            };
+            const pagination = req.pagination || {};
+
+            const tasks = await this.service.getAssignedTasks(req.user, filters, pagination);
+            sendSuccess(res, tasks);
+        } catch (error) {
+            console.error('[TasksController] getAssignedTasks Error:', error);
             if (next) next(error);
             else sendError(res, error);
         }
@@ -101,7 +119,6 @@ export class TasksController {
                 assignedToEmail: z.string().email().optional().or(z.literal('')),
                 dueDate: z.string().datetime().nullable().optional(),
                 notes: z.string().optional(),
-                due_date: z.string().datetime().nullable().optional(), // Adding due_date support
                 reminderAt: z.string().datetime().nullable().optional()
             });
 
@@ -124,6 +141,23 @@ export class TasksController {
             sendSuccess(res, null, 'Task deleted successfully');
         } catch (error) {
             console.error('[TasksController] deleteTask Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    }
+
+    assignTask = async (req, res, next) => {
+        try {
+            const { email } = req.body;
+            // Validate email if present
+            if (email && !z.string().email().safeParse(email).success) {
+                return sendError(res, 'Invalid email format', 400);
+            }
+
+            const task = await this.service.assignTask(req.params.id, req.user, email);
+            sendSuccess(res, task);
+        } catch (error) {
+            console.error('[TasksController] assignTask Error:', error);
             if (next) next(error);
             else sendError(res, error);
         }

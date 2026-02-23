@@ -9,14 +9,35 @@ export class TasksRepository {
 
         // Access Control & Filters
         if (filters.uid) {
-            // OR logic: Task is owned by user OR assigned to user
-            where.OR = [
-                { user_id: filters.uid },
-                { assigned_to_user_id: filters.uid }
-            ];
+            if (filters.onlyAssigned) {
+                // strict check for assigned tasks
+                where.OR = [
+                    { assigned_to_user_id: filters.uid }
+                ];
+                if (filters.email) {
+                    where.OR.push({ assigned_to_email: filters.email });
+                }
+            } else {
+                // OR logic: Task is owned by user OR assigned to user (My Tasks view)
+                where.OR = [
+                    { user_id: filters.uid },
+                    { assigned_to_user_id: filters.uid }
+                ];
+                // For "My Tasks", we usually include tasks assigned to my email too if we want to be complete, 
+                // but legacy logic was just ID. Let's stick to existing logic for the else block unless requested.
+            }
         }
 
         if (filters.category) where.category = filters.category;
+
+        if (filters.search) {
+            where.AND = {
+                OR: [
+                    { title: { contains: filters.search, mode: 'insensitive' } },
+                    { description: { contains: filters.search, mode: 'insensitive' } }
+                ]
+            };
+        }
 
         const orderBy = {};
         orderBy[sort.field || 'created_at'] = sort.direction || 'desc';

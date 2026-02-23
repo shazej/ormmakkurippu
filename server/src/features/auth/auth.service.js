@@ -77,7 +77,7 @@ export class AuthService {
                     email_verified: verified_email
                 }, tx);
 
-                // Find pending invites
+                // Find pending invites (Workspaces)
                 const pendingInvites = await tx.workspaceMember.findMany({
                     where: {
                         email: email,
@@ -99,7 +99,30 @@ export class AuthService {
                     });
                 }
 
-                return { user, activatedInvites: pendingInvites };
+                // Find pending task assignments
+                const pendingTasks = await tx.task.findMany({
+                    where: {
+                        assigned_to_email: email,
+                        assigned_to_user_id: null,
+                        deleted_at: null
+                    }
+                });
+
+                if (pendingTasks.length > 0) {
+                    await tx.task.updateMany({
+                        where: {
+                            assigned_to_email: email,
+                            assigned_to_user_id: null,
+                            deleted_at: null
+                        },
+                        data: {
+                            assigned_to_user_id: user.id,
+                            assigned_to_email: null
+                        }
+                    });
+                }
+
+                return { user, activatedInvites: pendingInvites, activatedTasks: pendingTasks };
             });
 
             // Audit Logs for Activation
@@ -111,6 +134,19 @@ export class AuthService {
                         'workspace',
                         invite.workspace_id,
                         { memberId: invite.id }
+                    );
+                }
+            }
+
+            // Audit Logs for Task Assignments
+            if (activatedTasks && activatedTasks.length > 0) {
+                for (const task of activatedTasks) {
+                    await logAudit(
+                        { uid: user.id, email: user.primary_email_id, role: user.role },
+                        'TASK_ASSIGNMENT_ACTIVATED',
+                        'task',
+                        task.id,
+                        { previousEmail: email }
                     );
                 }
             }

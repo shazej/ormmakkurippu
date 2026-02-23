@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useOutletContext } from 'react-router-dom'
 import { templates } from '../templates'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
@@ -7,22 +8,24 @@ import { useAuth } from '../context/AuthContext'
 
 export default function HomePage() {
     const { user } = useAuth();
-    const [tasks, setTasks] = useState([])
+    const { tasks, fetchTasks } = useOutletContext();
     const [formInitialData, setFormInitialData] = useState(null)
     const [createTaskError, setCreateTaskError] = useState(null)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
 
+    // Debounce Logic
     useEffect(() => {
-        fetchTasks()
-    }, [])
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery)
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [searchQuery])
 
-    const fetchTasks = async () => {
-        try {
-            const response = await axios.get('/api/tasks')
-            setTasks(response.data)
-        } catch (error) {
-            console.error('Error fetching tasks:', error)
-        }
-    }
+    // Fetch on debounced change
+    useEffect(() => {
+        fetchTasks(debouncedSearch)
+    }, [debouncedSearch])
 
     const handleTemplateClick = (template) => {
         setCreateTaskError(null);
@@ -62,6 +65,22 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto px-4 py-8">
             <h1 className="text-2xl font-bold text-gray-800 mb-6">Welcome, {user?.name}</h1>
 
+            {/* Search Bar */}
+            <div className="mb-6 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input
+                    type="text"
+                    placeholder="Search tasks..."
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-200 sm:text-sm transition duration-150 ease-in-out"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+
             <div className="mb-8">
                 {/* Templates */}
                 <div className="mb-6">
@@ -99,7 +118,7 @@ export default function HomePage() {
                         <p className="text-gray-500 text-sm italic">No tasks created yet.</p>
                     ) : (
                         tasks.filter(t => t.uid === (user?.uid || user?.id)).map(task => (
-                            <TaskCard key={task.id} task={task} />
+                            <TaskCard key={task.id} task={task} onUpdate={fetchTasks} />
                         ))
                     )}
                 </section>
@@ -114,7 +133,7 @@ export default function HomePage() {
                         <p className="text-gray-500 text-sm italic">No tasks assigned to you.</p>
                     ) : (
                         tasks.filter(t => t.assigned_to_user_id === (user?.uid || user?.id) || t.assigned_to_email === user?.email).map(task => (
-                            <TaskCard key={task.id} task={task} isAssigned={true} />
+                            <TaskCard key={task.id} task={task} isAssigned={true} onUpdate={fetchTasks} />
                         ))
                     )}
                 </section>

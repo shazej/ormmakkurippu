@@ -16,17 +16,16 @@ export class TasksService {
         filters.uid = user.uid;
         const tasks = await this.repository.find(filters, pagination);
 
-        // Post-process for masking
-        // Optimization: In a real app we would join user preferences, here we might do it iteratively or assume defaults
-        // For MVP: If I am NOT the owner, I should check owner's preference.
-        // But fetching owner pref for every task is expensive.
-        // Let's implement a simple rule: If I am assigned (not owner), mask unless I have specific permission (which we can't fully check easily yet without cache).
-        // Actually, let's load the Owner User for the task if not 'user.uid'.
+        // Masking logic
+        return tasks.map(task => this._applyMasking(task, user));
+    }
 
-        // Simpler approach for now: Mask everything if I am not the owner, 
-        // until we implement the full preference Loading.
-        // Wait, requirements say: "If OFF: Assignee can see the task but not caller phone"
+    async getAssignedTasks(user, filters = {}, pagination = {}) {
+        filters.uid = user.uid;
+        filters.email = user.email; // Pass email for loose matching
+        filters.onlyAssigned = true;
 
+        const tasks = await this.repository.find(filters, pagination);
         return tasks.map(task => this._applyMasking(task, user));
     }
 
@@ -105,7 +104,7 @@ export class TasksService {
         }
 
         // Whitelist allowed updates
-        const allowedUpdates = ['title', 'description', 'fromName', 'fromPhone', 'category', 'priority', 'status', 'notes', 'reminderAt', 'due_date'];
+        const allowedUpdates = ['title', 'description', 'fromName', 'fromPhone', 'category', 'priority', 'status', 'notes', 'reminderAt', 'dueDate'];
         const updates = {};
 
         Object.keys(data).forEach(key => {
@@ -164,7 +163,7 @@ export class TasksService {
         return [];
     }
 
-    async deleteTask(id, user) {
+    async softDelete(id, user) {
         const task = await this.getTask(id, user); // checks existence and basic access
 
         // Strict Owner Check for Deletion
@@ -173,5 +172,30 @@ export class TasksService {
         }
 
         return this.repository.softDelete(id);
+    }
+
+    async assignTask(id, user, email) {
+        const task = await this.getTask(id, user);
+
+        if (task.user_id !== user.uid) {
+            throw new AppError('Forbidden: Only the task owner can assign this task', 403);
+        }
+
+        const updates = {};
+        if (!email) {
+            updates.assigned_to_user_id = null;
+            updates.assigned_to_email = null;
+        } else {
+            const assignee = await this.usersRepository.findByEmail(email);
+            if (assignee) {
+                updates.assigned_to_user_id = assignee.id;
+                updates.assigned_to_email = null;
+            } else {
+                updates.assigned_to_user_id = null;
+                updates.assigned_to_email = email;
+            }
+        }
+
+        return this.repository.update(id, updates);
     }
 }

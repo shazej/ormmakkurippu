@@ -11,16 +11,18 @@ import {
     LogOut,
     Hash,
     ChevronDown,
-    X
+    X,
+    UserCheck
 } from 'lucide-react';
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, onOpenCreateTask }) {
     const { user, logout } = useAuth();
 
     const navItems = [
         { path: '/app', label: 'Inbox', icon: <Inbox size={20} />, exact: true },
         { path: '/app/today', label: 'Today', icon: <Calendar size={20} /> },
         { path: '/app/upcoming', label: 'Upcoming', icon: <CalendarDays size={20} /> },
+        { path: '/app/assigned', label: 'Assigned to Me', icon: <UserCheck size={20} /> },
         { path: '/app/completed', label: 'Completed', icon: <CheckCircle2 size={20} /> },
     ];
 
@@ -78,7 +80,10 @@ export default function Sidebar({ isOpen, onClose }) {
 
                     {/* Quick Actions */}
                     <div className="space-y-1">
-                        <button className="w-full flex items-center gap-2 px-2 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-left">
+                        <button
+                            onClick={onOpenCreateTask}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 rounded-md transition-colors text-left"
+                        >
                             <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center">
                                 <Plus size={16} />
                             </div>
