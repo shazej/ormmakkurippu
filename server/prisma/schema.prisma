@@ -48,6 +48,7 @@ model User {
   audit_logs          AuditLog[]
   tasks               Task[]
   assigned_tasks      Task[]    @relation("AssignedTasks")
+  labels              Label[]
   linked_accounts     LinkedAccount[]
   owned_groups        Group[]
   group_memberships   GroupMember[]
@@ -56,6 +57,7 @@ model User {
   owned_workspaces    Workspace[]
   workspace_memberships WorkspaceMember[]
   sent_invites        WorkspaceInvite[]
+  created_projects    Project[]
 
   @@map("users")
 }
@@ -251,10 +253,48 @@ model Task {
   related_call_log_id String?
   related_contact_id  String?
   caller_phone_e164   String?   // Denormalized for display
+  
+  // Recurrence
+  recurrence_rule        String?   // daily, weekly, monthly
+  recurrence_anchor_date DateTime?
+  next_instance_id       String?   @unique // To ensure idempotency
+
+  // Project Relation
+  project_id          String?
+  project             Project?  @relation(fields: [project_id], references: [id])
+
+  task_labels TaskLabel[]
 
   @@index([user_id])
   @@index([assigned_to_user_id])
+  @@index([project_id])
   @@map("tasks")
+}
+
+model Label {
+  id            String      @id @default(uuid())
+  owner_user_id String
+  name          String
+  color         String?     // hex code e.g. "#4A90E2"
+  created_at    DateTime    @default(now())
+
+  owner       User        @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+  task_labels TaskLabel[]
+
+  @@unique([owner_user_id, name])
+  @@index([owner_user_id])
+  @@map("labels")
+}
+
+model TaskLabel {
+  task_id  String
+  label_id String
+
+  task  Task  @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [label_id], references: [id], onDelete: Cascade)
+
+  @@id([task_id, label_id])
+  @@map("task_labels")
 }
 
 model Contact {
@@ -310,8 +350,26 @@ model Workspace {
   owner         User              @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
   members       WorkspaceMember[]
   invites       WorkspaceInvite[]
+  projects      Project[]
 
   @@map("workspaces")
+}
+
+model Project {
+  id                  String    @id @default(uuid())
+  workspace_id        String
+  name                String
+  color               String?
+  created_by_user_id  String
+  created_at          DateTime  @default(now())
+  archived_at         DateTime?
+
+  workspace           Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  created_by          User      @relation(fields: [created_by_user_id], references: [id])
+  tasks               Task[]
+
+  @@index([workspace_id])
+  @@map("projects")
 }
 
 enum WorkspaceRole {

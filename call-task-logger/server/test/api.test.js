@@ -158,4 +158,57 @@ test('Call Task Logger API Tests', async (t) => {
         const header = lines[0];
         assert.ok(header.includes('Created At') && header.includes('From Name'), 'CSV should contain correct headers');
     });
+
+    await t.test('7) Comments API', async (ct) => {
+        let commentId;
+        const taskOwner = "Test User"; // from step 1
+        const commenter = "Commenter 1";
+
+        await ct.test('Create comment', async () => {
+            const res = await request('POST', `/api/tasks/${createdTaskId}/comments`, {
+                author_name: commenter,
+                body: "Hello world"
+            });
+            assert.strictEqual(res.status, 201);
+            assert.strictEqual(res.body.author_name, commenter);
+            commentId = res.body.id;
+        });
+
+        await ct.test('Read comments', async () => {
+            const res = await request('GET', `/api/tasks/${createdTaskId}/comments`);
+            assert.strictEqual(res.status, 200);
+            assert.ok(Array.isArray(res.body));
+            assert.strictEqual(res.body.length, 1);
+            assert.strictEqual(res.body[0].body, "Hello world");
+        });
+
+        await ct.test('Unauthorized delete (wrong name)', async () => {
+            const res = await request('DELETE', `/api/comments/${commentId}`, {
+                author_name: "Someone Else"
+            });
+            assert.strictEqual(res.status, 403);
+        });
+
+        await ct.test('Delete own comment', async () => {
+            const res = await request('DELETE', `/api/comments/${commentId}`, {
+                author_name: commenter
+            });
+            assert.strictEqual(res.status, 200);
+        });
+
+        await ct.test('Delete any comment as task owner', async () => {
+            // Create a new comment first
+            const postRes = await request('POST', `/api/tasks/${createdTaskId}/comments`, {
+                author_name: "Other person",
+                body: "I will be deleted by owner"
+            });
+            const newCommentId = postRes.body.id;
+
+            // Delete as task owner ("Test User")
+            const delRes = await request('DELETE', `/api/comments/${newCommentId}`, {
+                author_name: taskOwner
+            });
+            assert.strictEqual(delRes.status, 200);
+        });
+    });
 });

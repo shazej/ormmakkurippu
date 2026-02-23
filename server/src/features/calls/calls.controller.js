@@ -15,7 +15,7 @@ export class CallLogsController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 
     createCallLog = async (req, res) => {
         try {
@@ -43,7 +43,7 @@ export class CallLogsController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 
     createTaskFromCall = async (req, res) => {
         try {
@@ -62,5 +62,5 @@ export class CallLogsController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 }

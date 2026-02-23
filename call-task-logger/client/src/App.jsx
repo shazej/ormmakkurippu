@@ -4,9 +4,11 @@ import { Plus, Download } from 'lucide-react';
 import { TaskList } from './components/TaskList';
 import { Filters } from './components/Filters';
 import { TaskForm } from './components/TaskForm';
+import { TaskDetailModal } from './components/TaskDetailModal';
 import { Modal } from './components/ui/Modal';
 import { Button } from './components/ui/Button';
 import { Switch } from './components/ui/Switch';
+import { NotificationBell } from './components/NotificationBell';
 
 import api from './api';
 
@@ -23,6 +25,7 @@ function App() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
+    const [viewingTask, setViewingTask] = useState(null);
     const [isCallLogMode, setIsCallLogMode] = useState(false);
 
     const fetchTasks = useCallback(async () => {
@@ -131,6 +134,7 @@ function App() {
                             <Plus className="h-4 w-4 mr-2" />
                             New Task
                         </Button>
+                        <NotificationBell />
                     </div>
                 </div>
                 <div className="max-w-4xl mx-auto px-4 pb-4 flex items-center gap-2">
@@ -154,6 +158,7 @@ function App() {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onRestore={filters.includeDeleted ? handleRestore : null}
+                    onViewDetail={setViewingTask}
                 />
             </main>
 
@@ -169,6 +174,12 @@ function App() {
                     isCallLogMode={isCallLogMode}
                 />
             </Modal>
+
+            <TaskDetailModal
+                task={viewingTask}
+                isOpen={!!viewingTask}
+                onClose={() => setViewingTask(null)}
+            />
         </div>
     );
 }

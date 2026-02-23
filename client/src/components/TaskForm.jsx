@@ -14,14 +14,36 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
         status: 'Pending',
         notes: '',
         assignedToEmail: '',
-        attachments: []
+        attachments: [],
+        recurrenceRule: null,
+        projectId: null
     });
+
+    const [projects, setProjects] = useState([]);
 
     useEffect(() => {
         if (initialData) {
-            setFormData(prev => ({ ...prev, ...initialData }));
+            setFormData(prev => ({
+                ...prev,
+                ...initialData,
+                projectId: initialData.project_id || initialData.projectId || null,
+                recurrenceRule: initialData.recurrence_rule || initialData.recurrenceRule || null
+            }));
         }
     }, [initialData]);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            if (!user?.default_workspace_id) return;
+            try {
+                const res = await axios.get(`/api/projects?workspaceId=${user.default_workspace_id}`);
+                setProjects(res.data);
+            } catch (err) {
+                console.error("Failed to fetch projects", err);
+            }
+        };
+        fetchProjects();
+    }, [user?.default_workspace_id]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -114,8 +136,7 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
                 />
                 <p className="text-xs text-gray-500 mt-1">Leave empty to keep unassigned.</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                     <select
@@ -143,6 +164,9 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
                         <option value="High">High</option>
                     </select>
                 </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
@@ -157,6 +181,35 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
                         <option value="Cancelled">Cancelled</option>
                     </select>
                 </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                    <select
+                        name="projectId"
+                        value={formData.projectId || ''}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">No Project</option>
+                        {projects.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Recurrence</label>
+                <select
+                    name="recurrenceRule"
+                    value={formData.recurrenceRule || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">None</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
             </div>
 
             <div>
@@ -219,7 +272,7 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
             >
                 {buttonText}
             </button>
-        </form>
+        </form >
     );
 }
 

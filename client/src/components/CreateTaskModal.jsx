@@ -1,14 +1,33 @@
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }) {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Medium');
+    const [recurrenceRule, setRecurrenceRule] = useState('');
+    const [projectId, setProjectId] = useState('');
+    const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    const { user } = useAuth();
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            if (!isOpen || !user?.default_workspace_id) return;
+            try {
+                const res = await axios.get(`/api/projects?workspaceId=${user.default_workspace_id}`);
+                setProjects(res.data);
+            } catch (err) {
+                console.error("Failed to fetch projects", err);
+            }
+        };
+        fetchProjects();
+    }, [isOpen, user?.default_workspace_id]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -21,7 +40,9 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }) {
                 description,
                 priority,
                 status: 'Pending',
-                dueDate: dueDate ? new Date(dueDate).toISOString() : null
+                dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+                recurrenceRule: recurrenceRule || null,
+                projectId: projectId || null
             };
 
             await axios.post('/api/tasks', payload);
@@ -134,6 +155,42 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }) {
                                                 <option value="Low">Low</option>
                                                 <option value="Medium">Medium</option>
                                                 <option value="High">High</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label htmlFor="projectId" className="block text-sm font-medium text-gray-700">
+                                                Project
+                                            </label>
+                                            <select
+                                                id="projectId"
+                                                value={projectId}
+                                                onChange={(e) => setProjectId(e.target.value)}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"
+                                            >
+                                                <option value="">No Project</option>
+                                                {projects.map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label htmlFor="recurrenceRule" className="block text-sm font-medium text-gray-700">
+                                                Recurrence
+                                            </label>
+                                            <select
+                                                id="recurrenceRule"
+                                                value={recurrenceRule}
+                                                onChange={(e) => setRecurrenceRule(e.target.value)}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"
+                                            >
+                                                <option value="">None</option>
+                                                <option value="daily">Daily</option>
+                                                <option value="weekly">Weekly</option>
+                                                <option value="monthly">Monthly</option>
                                             </select>
                                         </div>
                                     </div>

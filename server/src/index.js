@@ -31,6 +31,7 @@ import linkedAccountsRoutes from './features/linked-accounts/linked-accounts.rou
 import accountClosureRoutes from './features/account-closure/account-closure.routes.js';
 import settingsRoutes from './features/settings/settings.routes.js';
 import onboardingRoutes from './features/onboarding/onboarding.routes.js';
+import projectsRoutes from './features/projects/projects.routes.js';
 
 import { SecurityService } from './features/security/security.service.js';
 import { UsersRepository } from './features/users/users.repository.js';
@@ -172,6 +173,7 @@ setInterval(async () => {
 
 // Alias for /api/users/me
 app.get('/api/me', verifyFirebaseToken, usersController.getProfile);
+app.patch('/api/me', verifyFirebaseToken, usersController.updateProfile);
 
 // Health Check
 app.get('/', (req, res) => {
@@ -344,6 +346,7 @@ app.use('/api/linked-accounts', linkedAccountsRoutes);
 app.use('/api/account-closure', accountClosureRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/projects', projectsRoutes);
 
 // Error Handling Middleware (MUST be last)
 import { errorHandler } from './middleware/error-handler.js';

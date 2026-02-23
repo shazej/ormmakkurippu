@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import axios from 'axios'
 import { useOutletContext } from 'react-router-dom'
 import { templates } from '../templates'
 import TaskForm from '../components/TaskForm'
 import TaskCard from '../components/TaskCard'
+import BulkToolbar from '../components/BulkToolbar'
 import { useAuth } from '../context/AuthContext'
 
 export default function HomePage() {
     const { user } = useAuth();
-    const { tasks, fetchTasks } = useOutletContext();
+    const [tasks, setTasks] = useState([])
+    const [selectedTaskIds, setSelectedTaskIds] = useState([])
     const [formInitialData, setFormInitialData] = useState(null)
     const [createTaskError, setCreateTaskError] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedSearch, setDebouncedSearch] = useState('')
+
+    const { pathname } = useLocation();
 
     // Debounce Logic
     useEffect(() => {
@@ -22,10 +27,84 @@ export default function HomePage() {
         return () => clearTimeout(timer)
     }, [searchQuery])
 
-    // Fetch on debounced change
+    // Fetch on path or search change
     useEffect(() => {
         fetchTasks(debouncedSearch)
-    }, [debouncedSearch])
+        if (!debouncedSearch) setSelectedTaskIds([]) // Clear selection on path change if not searching
+    }, [pathname, debouncedSearch])
+
+    const fetchTasks = async (query = '') => {
+        try {
+            let endpoint = '/api/tasks';
+            const params = new URLSearchParams();
+
+            if (pathname === '/app/today') endpoint = '/api/tasks/today';
+            else if (pathname === '/app/upcoming') endpoint = '/api/tasks/upcoming';
+            else if (pathname === '/app/completed') params.append('status', 'Completed');
+            else if (pathname.startsWith('/app/projects/')) {
+                params.append('project_id', pathname.split('/').pop());
+            }
+
+            if (query) params.append('search', query);
+
+            const queryString = params.toString();
+            const finalUrl = queryString ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryString}` : endpoint;
+
+            const response = await axios.get(finalUrl)
+            setTasks(response.data.data || response.data)
+        } catch (error) {
+            console.error('Error fetching tasks:', error)
+        }
+    }
+
+    const handleTaskUpdate = (updatedTask, isSelectionOnly = false) => {
+        if (isSelectionOnly) {
+            setSelectedTaskIds(prev =>
+                updatedTask.isSelected
+                    ? [...prev, updatedTask.id]
+                    : prev.filter(id => id !== updatedTask.id)
+            );
+            return;
+        }
+
+        setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    };
+
+    const groupTasksByDate = (tasks) => {
+        const groups = {};
+        tasks.forEach(task => {
+            let dateKey = 'No Due Date';
+            if (task.due_date) {
+                const date = new Date(task.due_date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+
+                const taskDate = new Date(date);
+                taskDate.setHours(0, 0, 0, 0);
+
+                if (taskDate.getTime() === today.getTime()) dateKey = 'Today';
+                else if (taskDate.getTime() === tomorrow.getTime()) dateKey = 'Tomorrow';
+                else dateKey = taskDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            }
+            if (!groups[dateKey]) groups[dateKey] = [];
+            groups[dateKey].push({
+                ...task,
+                isSelected: selectedTaskIds.includes(task.id)
+            });
+        });
+        return groups;
+    };
+
+    const taskGroups = groupTasksByDate(tasks);
+    const getPageTitle = () => {
+        if (pathname === '/app/today') return 'Today';
+        if (pathname === '/app/upcoming') return 'Upcoming';
+        if (pathname === '/app/completed') return 'Completed';
+        if (pathname.startsWith('/app/projects/')) return 'Project Tasks';
+        return 'Inbox';
+    };
 
     const handleTemplateClick = (template) => {
         setCreateTaskError(null);
@@ -62,8 +141,8 @@ export default function HomePage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">Welcome, {user?.name}</h1>
+        <div className="max-w-4xl mx-auto px-4 py-8 pb-32">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">{getPageTitle()}</h1>
 
             {/* Search Bar */}
             <div className="mb-6 relative">
@@ -107,37 +186,43 @@ export default function HomePage() {
                 />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-                {/* My Tasks */}
-                <section>
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                        My Tasks
-                    </h2>
-                    {tasks.filter(t => t.uid === (user?.uid || user?.id)).length === 0 ? (
-                        <p className="text-gray-500 text-sm italic">No tasks created yet.</p>
-                    ) : (
-                        tasks.filter(t => t.uid === (user?.uid || user?.id)).map(task => (
-                            <TaskCard key={task.id} task={task} onUpdate={fetchTasks} />
-                        ))
-                    )}
-                </section>
-
-                {/* Assigned to Me */}
-                <section>
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        Assigned to Me
-                    </h2>
-                    {tasks.filter(t => t.assigned_to_user_id === (user?.uid || user?.id) || t.assigned_to_email === user?.email).length === 0 ? (
-                        <p className="text-gray-500 text-sm italic">No tasks assigned to you.</p>
-                    ) : (
-                        tasks.filter(t => t.assigned_to_user_id === (user?.uid || user?.id) || t.assigned_to_email === user?.email).map(task => (
-                            <TaskCard key={task.id} task={task} isAssigned={true} onUpdate={fetchTasks} />
-                        ))
-                    )}
-                </section>
+            <div className="space-y-8">
+                {Object.keys(taskGroups).length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                        <p className="text-gray-500 italic">No tasks found here.</p>
+                    </div>
+                ) : (
+                    Object.entries(taskGroups).map(([date, groupTasks]) => (
+                        <section key={date}>
+                            <h2 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-4 flex items-center justify-between">
+                                <span>{date}</span>
+                                <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{groupTasks.length}</span>
+                            </h2>
+                            <div className="space-y-3">
+                                {groupTasks.map(task => (
+                                    <TaskCard
+                                        key={task.id}
+                                        task={task}
+                                        isAssigned={task.assigned_to_user_id === (user?.uid || user?.id) || task.assigned_to_email === user?.email}
+                                        onUpdate={handleTaskUpdate}
+                                    />
+                                ))}
+                            </div>
+                        </section>
+                    ))
+                )}
             </div>
+
+            {selectedTaskIds.length > 0 && (
+                <BulkToolbar
+                    taskIds={selectedTaskIds}
+                    onActionComplete={() => {
+                        setSelectedTaskIds([]);
+                        fetchTasks();
+                    }}
+                    onClearSelection={() => setSelectedTaskIds([])}
+                />
+            )}
         </div>
     )
 }

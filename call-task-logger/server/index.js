@@ -14,6 +14,8 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+const CURRENT_USER_ID = 'local_user';
+
 // Database Setup
 const dbPath = path.resolve(__dirname, 'tasks.db');
 const db = new sqlite3.Database(dbPath);
@@ -37,6 +39,28 @@ db.serialize(() => {
   db.run("ALTER TABLE tasks ADD COLUMN deletedAt INTEGER DEFAULT NULL", (err) => {
     // Ignore error if column already exists
   });
+
+  // Comments table
+  db.run(`CREATE TABLE IF NOT EXISTS task_comments (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    author_name TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    deleted_at INTEGER DEFAULT NULL,
+    FOREIGN KEY(task_id) REFERENCES tasks(id)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    link_url TEXT,
+    created_at INTEGER NOT NULL,
+    read_at INTEGER DEFAULT NULL
+  )`);
 });
 
 // Validation Schemas
@@ -51,6 +75,90 @@ const taskSchema = z.object({
 });
 
 const updateTaskSchema = taskSchema.partial();
+
+const commentSchema = z.object({
+  author_name: z.string().min(1, 'Author name is required'),
+  body: z.string().min(1, 'Comment body is required'),
+});
+
+const notificationSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string(),
+  type: z.string(),
+  title: z.string(),
+  body: z.string(),
+  link_url: z.string().optional(),
+  created_at: z.number(),
+  read_at: z.number().nullable().optional(),
+});
+
+// Helper to create notifications
+function createNotification({ type, title, body, link_url = '', user_id = CURRENT_USER_ID }) {
+  const id = uuidv4();
+  const now = Date.now();
+  const stmt = db.prepare(`INSERT INTO notifications (
+    id, user_id, type, title, body, link_url, created_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+
+  stmt.run(id, user_id, type, title, body, link_url, now, (err) => {
+    if (err) console.error('Error creating notification:', err.message);
+  });
+  stmt.finalize();
+}
+
+// Routes
+
+// GET /api/notifications
+app.get('/api/notifications', (req, res) => {
+  db.all(
+    "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+    [CURRENT_USER_ID],
+    (err, rows) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(rows);
+    }
+  );
+});
+
+// POST /api/notifications/:id/read
+app.post('/api/notifications/:id/read', (req, res) => {
+  const { id } = req.params;
+  const now = Date.now();
+  db.run(
+    "UPDATE notifications SET read_at = ? WHERE id = ? AND user_id = ?",
+    [now, id, CURRENT_USER_ID],
+    function (err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      if (this.changes === 0) {
+        res.status(404).json({ error: 'Notification not found' });
+        return;
+      }
+      res.json({ success: true, read_at: now });
+    }
+  );
+});
+
+// POST /api/notifications/read-all
+app.post('/api/notifications/read-all', (req, res) => {
+  const now = Date.now();
+  db.run(
+    "UPDATE notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL",
+    [now, CURRENT_USER_ID],
+    function (err) {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ success: true, count: this.changes });
+    }
+  );
+});
 
 // Routes
 
@@ -130,6 +238,28 @@ app.post('/api/tasks', (req, res) => {
           res.status(500).json({ error: err.message });
           return;
         }
+
+        // Trigger notification if assigned (simulated logic for demo)
+        // Note: In a real app we'd check if assignedTo changed or is set
+        if (req.body.assignedTo) {
+          createNotification({
+            type: 'assigned_to_you',
+            title: 'Task Assigned',
+            body: `You were assigned a new task: ${data.fromName}`,
+            link_url: `/#task-${id}`
+          });
+        }
+
+        // Simple check for comment mentions simulated in notes
+        if (data.notes && data.notes.includes('@name')) {
+          createNotification({
+            type: 'comment_mention',
+            title: 'Mentioned in Notes',
+            body: `You were mentioned in a task: ${data.fromName}`,
+            link_url: `/#task-${id}`
+          });
+        }
+
         res.status(201).json({ id, ...data, createdAt: now, updatedAt: now });
       }
     );
@@ -264,6 +394,106 @@ app.get('/api/export', (req, res) => {
     res.send(header + records);
   });
 });
+
+// ─── Comments Endpoints ────────────────────────────────────────────────────
+
+// Helper: load task ensuring it exists and is not deleted
+function getActiveTask(id, cb) {
+  db.get("SELECT * FROM tasks WHERE id = ? AND deletedAt IS NULL", [id], (err, row) => {
+    if (err) return cb(err);
+    if (!row) return cb(null, null);
+    cb(null, row);
+  });
+}
+
+// GET /api/tasks/:id/comments
+app.get('/api/tasks/:id/comments', (req, res) => {
+  const { id } = req.params;
+  getActiveTask(id, (err, task) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    db.all(
+      "SELECT * FROM task_comments WHERE task_id = ? AND deleted_at IS NULL ORDER BY created_at ASC",
+      [id],
+      (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+      }
+    );
+  });
+});
+
+// POST /api/tasks/:id/comments
+app.post('/api/tasks/:id/comments', (req, res) => {
+  const { id } = req.params;
+  try {
+    const data = commentSchema.parse(req.body);
+    getActiveTask(id, (err, task) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+
+      const commentId = uuidv4();
+      const now = Date.now();
+      db.run(
+        "INSERT INTO task_comments (id, task_id, author_name, body, created_at) VALUES (?, ?, ?, ?, ?)",
+        [commentId, id, data.author_name, data.body, now],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.status(201).json({
+            id: commentId,
+            task_id: id,
+            author_name: data.author_name,
+            body: data.body,
+            created_at: now,
+            deleted_at: null,
+          });
+        }
+      );
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/comments/:id  (soft delete)
+app.delete('/api/comments/:id', (req, res) => {
+  const { id } = req.params;
+  const { author_name } = req.body || {};
+
+  if (!author_name || !author_name.trim()) {
+    return res.status(400).json({ error: 'author_name is required' });
+  }
+
+  // Load the comment
+  db.get("SELECT * FROM task_comments WHERE id = ? AND deleted_at IS NULL", [id], (err, comment) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    // Load the parent task to check owner
+    db.get("SELECT * FROM tasks WHERE id = ?", [comment.task_id], (err, task) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const isOwner = task && task.fromName === author_name.trim();
+      const isAuthor = comment.author_name === author_name.trim();
+
+      if (!isOwner && !isAuthor) {
+        return res.status(403).json({ error: 'Forbidden: you can only delete your own comments' });
+      }
+
+      const now = Date.now();
+      db.run("UPDATE task_comments SET deleted_at = ? WHERE id = ?", [now, id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Comment deleted' });
+      });
+    });
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

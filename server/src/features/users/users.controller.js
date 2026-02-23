@@ -15,7 +15,7 @@ export class UsersController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 
     updateProfile = async (req, res) => {
         try {
@@ -33,7 +33,7 @@ export class UsersController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 
     updatePreferences = async (req, res) => {
         try {
@@ -50,5 +50,5 @@ export class UsersController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 }

@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useProjects } from '../../context/ProjectsContext';
+import CreateProjectModal from '../CreateProjectModal';
 import {
     Inbox,
     Calendar,
@@ -12,11 +14,16 @@ import {
     Hash,
     ChevronDown,
     X,
-    UserCheck
+    UserCheck,
+    Folder,
+    Settings,
+    Database
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose, onOpenCreateTask }) {
     const { user, logout } = useAuth();
+    const { projects, loading: projectsLoading } = useProjects();
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     const navItems = [
         { path: '/app', label: 'Inbox', icon: <Inbox size={20} />, exact: true },
@@ -24,13 +31,6 @@ export default function Sidebar({ isOpen, onClose, onOpenCreateTask }) {
         { path: '/app/upcoming', label: 'Upcoming', icon: <CalendarDays size={20} /> },
         { path: '/app/assigned', label: 'Assigned to Me', icon: <UserCheck size={20} /> },
         { path: '/app/completed', label: 'Completed', icon: <CheckCircle2 size={20} /> },
-    ];
-
-    const projects = [
-        // Placeholder projects
-        { id: 1, name: 'Personal', color: 'text-red-500' },
-        { id: 2, name: 'Work', color: 'text-blue-500' },
-        { id: 3, name: 'Shopping', color: 'text-green-500' },
     ];
 
     return (
@@ -69,10 +69,6 @@ export default function Sidebar({ isOpen, onClose, onOpenCreateTask }) {
                     <button onClick={onClose} className="lg:hidden p-1 text-gray-500 hover:bg-gray-200 rounded">
                         <X size={20} />
                     </button>
-
-                    <div className="hidden lg:flex gap-1 text-gray-400">
-                        {/* Desktop only icons if needed */}
-                    </div>
                 </div>
 
                 {/* Main Navigation */}
@@ -123,24 +119,74 @@ export default function Sidebar({ isOpen, onClose, onOpenCreateTask }) {
 
                     {/* Projects */}
                     <div>
-                        <div className="flex items-center justify-between px-2 py-1 text-gray-500 hover:text-gray-700 cursor-pointer group">
+                        <div className="flex items-center justify-between px-2 py-1 text-gray-500 hover:text-gray-700 group">
                             <h3 className="text-xs font-semibold uppercase tracking-wider">My Projects</h3>
-                            <div className="opacity-0 group-hover:opacity-100 flex gap-1">
-                                <Plus size={14} className="hover:bg-gray-200 rounded" />
-                                <ChevronDown size={14} className="hover:bg-gray-200 rounded" />
-                            </div>
+                            <button
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-200 rounded transition-opacity"
+                                title="Add Project"
+                            >
+                                <Plus size={14} />
+                            </button>
                         </div>
                         <div className="mt-1 space-y-0.5">
-                            {projects.map(project => (
-                                <Link
+                            {projectsLoading ? (
+                                <div className="px-2 py-1.5 text-xs text-gray-400 animate-pulse">Loading...</div>
+                            ) : projects.length === 0 ? (
+                                <div className="px-2 py-1.5 text-xs text-gray-400">No projects yet</div>
+                            ) : projects.map(project => (
+                                <NavLink
                                     key={project.id}
-                                    to={`/app/project/${project.id}`}
-                                    className="flex items-center gap-3 px-2 py-1.5 rounded-md text-sm text-gray-700 hover:bg-gray-200 transition-colors"
+                                    to={`/app/projects/${project.id}`}
+                                    className={({ isActive }) => `
+                                        flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors
+                                        ${isActive
+                                            ? 'bg-blue-100 text-blue-700 font-medium'
+                                            : 'text-gray-700 hover:bg-gray-200'}
+                                    `}
+                                    onClick={() => window.innerWidth < 1024 && onClose()}
                                 >
-                                    <Hash size={18} className={project.color} />
-                                    {project.name}
-                                </Link>
+                                    <div className={`w-3 h-3 rounded-full border ${project.color || 'bg-gray-400 border-gray-400'}`} />
+                                    <span className="truncate">{project.name}</span>
+                                </NavLink>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* Settings */}
+                    <div className="pb-4 px-3">
+                        <div className="px-2 py-1 flex items-center gap-3 text-gray-500">
+                            <Settings size={14} className="font-semibold uppercase tracking-wider" />
+                            <h3 className="text-xs font-semibold uppercase tracking-wider">Settings</h3>
+                        </div>
+                        <div className="mt-1 space-y-0.5">
+                            <NavLink
+                                to="/app/settings"
+                                end
+                                className={({ isActive }) => `
+                                flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors
+                                ${isActive
+                                        ? 'bg-blue-100 text-blue-700 font-medium'
+                                        : 'text-gray-700 hover:bg-gray-200'}
+                            `}
+                                onClick={() => window.innerWidth < 1024 && onClose()}
+                            >
+                                <Settings size={18} className="text-gray-500" />
+                                <span className="truncate">General Settings</span>
+                            </NavLink>
+                            <NavLink
+                                to="/app/settings/data"
+                                className={({ isActive }) => `
+                                flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors
+                                ${isActive
+                                        ? 'bg-blue-100 text-blue-700 font-medium'
+                                        : 'text-gray-700 hover:bg-gray-200'}
+                            `}
+                                onClick={() => window.innerWidth < 1024 && onClose()}
+                            >
+                                <Database size={18} className="text-gray-500" />
+                                <span className="truncate">Data Management</span>
+                            </NavLink>
                         </div>
                     </div>
                 </div>
@@ -156,6 +202,12 @@ export default function Sidebar({ isOpen, onClose, onOpenCreateTask }) {
                     </button>
                 </div>
             </aside>
+
+            {/* Modals */}
+            <CreateProjectModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+            />
         </>
     );
 }

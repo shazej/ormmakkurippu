@@ -160,6 +160,67 @@ export class WorkspacesService {
         }
     }
 
+    async updateWorkspace(user, workspaceId, data) {
+        const workspace = await this.repository.findById(workspaceId);
+        if (!workspace) {
+            const error = new Error('Workspace not found');
+            error.status = 404;
+            throw error;
+        }
+
+        if (workspace.owner_user_id !== user.uid) {
+            const error = new Error('Only the owner can rename the workspace');
+            error.status = 403;
+            throw error;
+        }
+
+        return prisma.workspace.update({
+            where: { id: workspaceId },
+            data: { name: data.name }
+        });
+    }
+
+    async removeMember(user, workspaceId, memberUserId) {
+        const workspace = await this.repository.findById(workspaceId);
+        if (!workspace) {
+            const error = new Error('Workspace not found');
+            error.status = 404;
+            throw error;
+        }
+
+        if (workspace.owner_user_id !== user.uid) {
+            const error = new Error('Only the owner can remove members');
+            error.status = 403;
+            throw error;
+        }
+
+        if (memberUserId === user.uid) {
+            const error = new Error('Owner cannot remove themselves from the workspace');
+            error.status = 400;
+            throw error;
+        }
+
+        // Find the member record
+        const member = workspace.members.find(m => m.user_id === memberUserId);
+        if (!member) {
+            const error = new Error('Member not found in this workspace');
+            error.status = 404;
+            throw error;
+        }
+
+        return await prisma.$transaction([
+            prisma.workspaceMember.delete({
+                where: { id: member.id }
+            }),
+            prisma.workspaceInvite.deleteMany({
+                where: {
+                    workspace_id: workspaceId,
+                    email: member.email
+                }
+            })
+        ]);
+    }
+
     async getCurrentWorkspace(user) {
         // 1. Try default workspace from user preference
         const defaultWorkspaceId = user._dbUser?.default_workspace_id;

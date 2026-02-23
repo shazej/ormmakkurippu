@@ -8,6 +8,8 @@ const controller = new WorkspacesController();
 router.use(authenticateUser);
 
 router.get('/current', controller.getCurrentWorkspace);
+router.patch('/current', controller.updateCurrentWorkspace);
+router.delete('/current/members/:userId', controller.removeMember);
 router.get('/', controller.getWorkspaces);
 router.post('/', controller.createWorkspace);
 router.post('/:id/invite', controller.inviteMember);

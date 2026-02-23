@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ProjectsProvider } from './context/ProjectsContext';
 import MarketingLayout from './layouts/MarketingLayout';
 import AppLayout from './layouts/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -7,6 +8,9 @@ import HomePage from './pages/HomePage'; // This is "Inbox" now
 import CallsPage from './pages/CallsPage';
 import AssignedToMePage from './pages/AssignedToMePage';
 import TaskDetailsPage from './pages/TaskDetailsPage';
+import ProjectPage from './pages/ProjectPage';
+import SettingsDataPage from './pages/SettingsDataPage';
+import SettingsPage from './pages/SettingsPage';
 import OnboardingWizard from './pages/onboarding/OnboardingWizard';
 
 import WelcomeStep from './pages/onboarding/WelcomeStep';
@@ -56,17 +60,21 @@ function AppRoutes() {
 
             <Route path="/app" element={
                 <ProtectedRoute>
-                    <AppLayout />
+                    <ProjectsProvider>
+                        <AppLayout />
+                    </ProjectsProvider>
                 </ProtectedRoute>
             }>
                 <Route index element={<HomePage />} />
                 <Route path="today" element={<HomePage />} />
                 <Route path="upcoming" element={<HomePage />} />
                 <Route path="completed" element={<HomePage />} />
-                <Route path="project/:id" element={<HomePage />} />
+                <Route path="projects/:id" element={<ProjectPage />} />
                 <Route path="calls" element={<CallsPage />} />
                 <Route path="assigned" element={<AssignedToMePage />} />
                 <Route path="tasks/:id" element={<TaskDetailsPage />} />
+                <Route path="settings/data" element={<SettingsDataPage />} />
+                <Route path="settings" element={<SettingsPage />} />
                 <Route path="onboard/welcome" element={<WelcomeStep />} />
             </Route>
 
