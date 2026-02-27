@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import AttachmentUpload from './AttachmentUpload';
 import { useAuth } from '../context/AuthContext';
 
 function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = null }) {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
+    const [localError, setLocalError] = useState(null);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -37,7 +39,8 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
             if (!user?.default_workspace_id) return;
             try {
                 const res = await axios.get(`/api/projects?workspaceId=${user.default_workspace_id}`);
-                setProjects(res.data);
+                const list = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+                setProjects(list);
             } catch (err) {
                 console.error("Failed to fetch projects", err);
             }
@@ -70,12 +73,18 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setLocalError(null);
+        const hasContent = formData.title?.trim() || formData.fromName?.trim() || formData.description?.trim();
+        if (!hasContent) {
+            setLocalError('Task title is required. Please enter a title, caller name, or description.');
+            return;
+        }
         onSubmit(formData);
     };
 
     return (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 space-y-4">
-            {error && (
+            {(error || localError) && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
                     <div className="flex">
                         <div className="flex-shrink-0">
@@ -84,7 +93,7 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
                             </svg>
                         </div>
                         <div className="ml-3">
-                            <p className="text-sm text-red-700 whitespace-pre-wrap">{error}</p>
+                            <p className="text-sm text-red-700 whitespace-pre-wrap">{error || localError}</p>
                         </div>
                     </div>
                 </div>

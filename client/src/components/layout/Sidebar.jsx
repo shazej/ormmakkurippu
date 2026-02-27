@@ -106,7 +106,7 @@ export default function Sidebar({ isOpen, onClose, onOpenCreateTask }) {
                                 `}
                                 onClick={() => window.innerWidth < 1024 && onClose()}
                             >
-                                <span className={({ isActive }) => isActive ? 'text-blue-600' : 'text-gray-500'}>
+                                <span className="text-gray-500">
                                     {item.icon}
                                 </span>
                                 {item.label}

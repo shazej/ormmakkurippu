@@ -21,7 +21,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }) {
             if (!isOpen || !user?.default_workspace_id) return;
             try {
                 const res = await axios.get(`/api/projects?workspaceId=${user.default_workspace_id}`);
-                setProjects(res.data);
+                const list = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+                setProjects(list);
             } catch (err) {
                 console.error("Failed to fetch projects", err);
             }

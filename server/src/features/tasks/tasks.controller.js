@@ -66,7 +66,7 @@ export class TasksController {
             if (next) next(error);
             else sendError(res, error);
         }
-    }
+    };
 
     getTask = async (req, res, next) => {
         try {
@@ -175,66 +175,69 @@ export class TasksController {
             if (next) next(error);
             else sendError(res, error);
         }
-        assignTask = async (req, res, next) => {
-            try {
-                const { email } = req.body;
-                if (email && !z.string().email().safeParse(email).success) {
-                    return sendError(res, 'Invalid email format', 400);
-                }
+    };
 
-                const task = await this.service.assignTask(req.params.id, req.user, email);
-                sendSuccess(res, task);
-            } catch (error) {
-                console.error('[TasksController] assignTask Error:', error);
-                if (next) next(error);
-                else sendError(res, error);
+    assignTask = async (req, res, next) => {
+        try {
+            const { email } = req.body;
+            if (email && !z.string().email().safeParse(email).success) {
+                return sendError(res, 'Invalid email format', 400);
             }
-        };
 
-        bulkTasks = async (req, res, next) => {
-            try {
-                const schema = z.object({
-                    action: z.enum(['complete', 'reopen', 'delete', 'assign']),
-                    taskIds: z.array(z.string()),
-                    email: z.string().email().optional()
-                });
+            const task = await this.service.assignTask(req.params.id, req.user, email);
+            sendSuccess(res, task);
+        } catch (error) {
+            console.error('[TasksController] assignTask Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    };
 
-                const result = schema.safeParse(req.body);
-                if (!result.success) return sendError(res, result.error.errors, 400);
+    bulkTasks = async (req, res, next) => {
+        try {
+            const schema = z.object({
+                action: z.enum(['complete', 'reopen', 'delete', 'assign']),
+                taskIds: z.array(z.string()),
+                email: z.string().email().optional()
+            });
 
-                const summary = await this.service.bulkTasks(req.user, result.data);
-                sendSuccess(res, summary);
-            } catch (error) {
-                console.error('[TasksController] bulkTasks Error:', error);
-                if (next) next(error);
-                else sendError(res, error);
+            const result = schema.safeParse(req.body);
+            if (!result.success) return sendError(res, result.error.errors, 400);
+
+            const summary = await this.service.bulkTasks(req.user, result.data);
+            sendSuccess(res, summary);
+        } catch (error) {
+            console.error('[TasksController] bulkTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    };
+
+    exportTasks = async (req, res, next) => {
+        try {
+            const csv = await this.service.exportTasksCsv(req.user);
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', 'attachment; filename="tasks-export.csv"');
+            res.status(200).send(csv);
+        } catch (error) {
+            console.error('[TasksController] exportTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    };
+
+    importTasks = async (req, res, next) => {
+        try {
+            if (!req.file) {
+                return sendError(res, 'No file uploaded', 400);
             }
-        };
+            const results = await this.service.importTasksCsv(req.user, req.file.buffer);
+            sendSuccess(res, results, 'Tasks imported successfully');
+        } catch (error) {
+            console.error('[TasksController] importTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error.message || 'Error importing tasks', error.statusCode || 500);
+        }
+    };
+}
 
-        exportTasks = async (req, res, next) => {
-            try {
-                const csv = await this.service.exportTasksCsv(req.user);
-                res.setHeader('Content-Type', 'text/csv');
-                res.setHeader('Content-Disposition', 'attachment; filename="tasks-export.csv"');
-                res.status(200).send(csv);
-            } catch (error) {
-                console.error('[TasksController] exportTasks Error:', error);
-                if (next) next(error);
-                else sendError(res, error);
-            }
-        };
-
-        importTasks = async (req, res, next) => {
-            try {
-                if (!req.file) {
-                    return sendError(res, 'No file uploaded', 400);
-                }
-                const results = await this.service.importTasksCsv(req.user, req.file.buffer);
-                sendSuccess(res, results, 'Tasks imported successfully');
-            } catch (error) {
-                console.error('[TasksController] importTasks Error:', error);
-                if (next) next(error);
-                else sendError(res, error.message || 'Error importing tasks', error.statusCode || 500);
-            }
-        };
-    }

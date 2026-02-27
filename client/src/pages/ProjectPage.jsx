@@ -26,7 +26,7 @@ export default function ProjectPage() {
         setLoading(true);
         try {
             const response = await axios.get(`/api/tasks?project_id=${id}`);
-            setTasks(response.data);
+            setTasks(response.data.data || response.data);
         } catch (error) {
             console.error('Error fetching tasks for project:', error);
         } finally {

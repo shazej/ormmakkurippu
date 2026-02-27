@@ -7,36 +7,96 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const DEMO_AUTH = import.meta.env.VITE_DEMO_AUTH === 'true';
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('auth_token'));
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            const storedUser = localStorage.getItem('auth_user');
-            if (storedUser) setUser(JSON.parse(storedUser));
+            // Always fetch fresh from server — localStorage may have stale is_onboarded=false
+            axios.get(`${API}/api/users/me`)
+                .then(res => {
+                    const profile = res.data?.data || res.data;
+                    if (profile?.id || profile?.primary_email_id) {
+                        setUser(profile);
+                        localStorage.setItem('auth_user', JSON.stringify(profile));
+                    } else {
+                        // Fix for 204 or unexpected success with no user
+                        setToken(null);
+                        setUser(null);
+                        localStorage.removeItem('auth_token');
+                        localStorage.removeItem('auth_user');
+                        delete axios.defaults.headers.common['Authorization'];
+                    }
+                })
+                .catch(() => {
+                    // Token invalid — clear it
+                    setToken(null);
+                    setUser(null);
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('auth_user');
+                    delete axios.defaults.headers.common['Authorization'];
+                })
+                .finally(() => setLoading(false));
         } else {
             delete axios.defaults.headers.common['Authorization'];
+            setLoading(false);
         }
-        setLoading(false);
     }, [token]);
 
-    // ... login logic ...
+    // ── Demo Login (DEMO_AUTH=true only) ──────────────────────────────────────
+    const demoLogin = async (email) => {
+        try {
+            // Always clear stale session first so old is_onboarded=false can't interfere
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            delete axios.defaults.headers.common['Authorization'];
 
+            const res = await axios.post(`${API}/api/auth/demo-login`, { email });
+            const { token: newToken, user: userData } = res.data;
+
+            axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+            setToken(newToken);
+            localStorage.setItem('auth_token', newToken);
+
+            // Fetch full profile
+            let profile = userData;
+            try {
+                const meRes = await axios.get(`${API}/api/users/me`);
+                if (meRes.data?.success) profile = meRes.data.data;
+            } catch { /* use profile from login response */ }
+
+            setUser(profile);
+            localStorage.setItem('auth_user', JSON.stringify(profile));
+
+            if (profile.is_onboarded) {
+                navigate('/app');
+            } else {
+                navigate('/onboarding');
+            }
+        } catch (error) {
+            const msg = error?.response?.data?.error || 'Demo login failed. Please try again.';
+            console.error('[DEMO_AUTH] demoLogin error:', error);
+            alert(msg);
+        }
+    };
+
+    // ── Google Login (DEMO_AUTH=false only) ────────────────────────────────
     const login = useGoogleLogin({
         flow: 'auth-code',
         scope: 'https://www.googleapis.com/auth/drive.file openid email profile',
         onSuccess: async (codeResponse) => {
             try {
                 const { code } = codeResponse;
-                // Use full URL to avoid proxy issues during dev if needed, or rely on proxy
-                const res = await axios.post('http://localhost:4000/api/auth/google', { code });
+                const res = await axios.post(`${API}/api/auth/google`, { code });
 
                 const { user: userData, tokens } = res.data;
-
-                // We use the ID Token as our session bearer for backend requests
                 const idToken = tokens.id_token;
 
                 setToken(idToken);
@@ -59,16 +119,18 @@ export const AuthProvider = ({ children }) => {
     });
 
     const logout = () => {
-        googleLogout();
+        if (!DEMO_AUTH) googleLogout();
         setToken(null);
         setUser(null);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
+        delete axios.defaults.headers.common['Authorization'];
+        navigate('/login');
     };
 
     const refreshUser = async () => {
         try {
-            const res = await axios.get('http://localhost:4000/api/users/me');
+            const res = await axios.get(`${API}/api/users/me`);
             if (res.data.success) {
                 setUser(res.data.data);
                 localStorage.setItem('auth_user', JSON.stringify(res.data.data));
@@ -79,7 +141,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, loading, refreshUser }}>
+        <AuthContext.Provider value={{ user, token, login, demoLogin, logout, loading, refreshUser, isDemoAuth: DEMO_AUTH }}>
             {children}
         </AuthContext.Provider>
     );

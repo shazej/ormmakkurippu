@@ -3,19 +3,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function LandingPage() {
-    const { user, login } = useAuth();
+    const { user } = useAuth();
 
     useEffect(() => {
         document.title = "Ormmakurippu - Organize your work and life";
-        const metaDescription = document.querySelector('meta[name="description"]');
-        if (metaDescription) {
-            metaDescription.content = "Ormmakurippu is a modern task manager that helps you organize your work, track calls, and collaborate with your team.";
-        } else {
-            const meta = document.createElement('meta');
-            meta.name = "description";
-            meta.content = "Ormmakurippu is a modern task manager that helps you organize your work, track calls, and collaborate with your team.";
-            document.head.appendChild(meta);
-        }
     }, []);
 
     return (
@@ -37,14 +28,14 @@ export default function LandingPage() {
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                                 {user ? (
-                                    <Link to="/app" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                    <Link to="/app" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center">
                                         Go to App
                                     </Link>
                                 ) : (
                                     <>
-                                        <button onClick={() => login()} className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                        <Link to="/login" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center">
                                             Start for free
-                                        </button>
+                                        </Link>
                                         <div className="hidden sm:flex items-center text-gray-500 text-sm font-medium">
                                             <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -112,7 +103,7 @@ export default function LandingPage() {
             </section>
 
             {/* Features Section */}
-            <section className="py-20 lg:py-32">
+            <section id="features" className="py-20 lg:py-32">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-3xl mx-auto mb-16">
                         <h2 className="text-3xl font-bold text-gray-900 mb-4">A powerful task manager you can trust</h2>
@@ -161,13 +152,13 @@ export default function LandingPage() {
                 <div className="max-w-4xl mx-auto px-4">
                     <h2 className="text-3xl sm:text-4xl font-bold mb-8">Achieve peace of mind with Ormmakurippu</h2>
                     {user ? (
-                        <Link to="/app" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-500 transition-colors inline-block">
+                        <Link to="/app" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-500 transition-colors inline-block text-center">
                             Go to App
                         </Link>
                     ) : (
-                        <button onClick={() => login()} className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-500 transition-colors inline-block">
+                        <Link to="/login" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-500 transition-colors inline-block text-center">
                             Start for free
-                        </button>
+                        </Link>
                     )}
                 </div>
             </section>

@@ -14,6 +14,7 @@ import { verifyFirebaseToken } from './middleware/auth.js';
 import { uploadToDrive, getOAuthClient } from './drive.js';
 import { google } from 'googleapis';
 import adminRoutes from './admin/routes.js';
+import { apiAdminRouter } from './admin/routes.js';
 import accountRoutes from './features/account/account.routes.js';
 import securityRoutes from './features/security/security.routes.js';
 import mfaRoutes from './features/mfa/mfa.routes.js';
@@ -32,6 +33,7 @@ import accountClosureRoutes from './features/account-closure/account-closure.rou
 import settingsRoutes from './features/settings/settings.routes.js';
 import onboardingRoutes from './features/onboarding/onboarding.routes.js';
 import projectsRoutes from './features/projects/projects.routes.js';
+import notificationsRoutes from './features/notifications/notifications.routes.js';
 
 import { SecurityService } from './features/security/security.service.js';
 import { UsersRepository } from './features/users/users.repository.js';
@@ -46,6 +48,12 @@ const allowedIpsRepository = new AllowedIpsRepository();
 const usersController = new UsersController();
 
 dotenv.config();
+
+// ── Production guard: DEMO_AUTH must never run in production ─────────────────
+if (process.env.NODE_ENV === 'production' && process.env.DEMO_AUTH === 'true') {
+    console.error('FATAL: DEMO_AUTH=true is not allowed in NODE_ENV=production. Shutting down.');
+    process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -103,18 +111,23 @@ app.use(helmet({
 }));
 
 // 4. CORS
-const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+// Support comma-separated origins: CLIENT_ORIGIN=http://localhost:5173,http://localhost:5175
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:3000')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean);
+
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow no origin (e.g. mobile apps, curl) or allowed origin
-        if (!origin || origin === clientOrigin) {
+        // Allow no origin (e.g. mobile apps, curl) or any allowed origin
+        if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             console.warn(`Blocked CORS for origin: ${origin}`);
             callback(new Error('Not allowed by CORS'));
         }
     },
-    credentials: true, // Allow cookies
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -192,9 +205,11 @@ app.get('/health', (req, res) => {
 
     res.status(dbStatus === 'connected' ? 200 : 503).json({
         ok: dbStatus === 'connected',
+        mode: isLocalEnv ? 'local' : 'production',
+        demoAuth: process.env.DEMO_AUTH === 'true',
+        localDb: isLocalEnv || isLocalInstance,
         dbProvider: (isLocalEnv || isLocalInstance) ? 'LocalDb' : 'Firestore',
         dbStatus,
-        env: process.env.NODE_ENV,
         version: process.env.npm_package_version || '1.0.0'
     });
 });
@@ -333,6 +348,7 @@ if (process.env.E2E_TEST_MODE === 'true') {
 
 // App Routes
 app.use('/admin', adminRoutes); // Mount at /admin (e.g. /admin/dashboard)
+app.use('/api/admin', apiAdminRouter); // API admin endpoints (reset-demo, audit-logs)
 app.use('/api/account', accountRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/mfa', mfaRoutes);
@@ -347,6 +363,7 @@ app.use('/api/account-closure', accountClosureRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/projects', projectsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Error Handling Middleware (MUST be last)
 import { errorHandler } from './middleware/error-handler.js';

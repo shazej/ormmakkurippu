@@ -21,9 +21,9 @@ export default function MarketingLayout() {
 
                         {/* Desktop Navigation */}
                         <nav className="hidden md:flex space-x-8">
-                            <Link to="#" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Made for</Link>
-                            <Link to="#" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Resources</Link>
-                            <Link to="#" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Pricing</Link>
+                            <a href="#features" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Made for</a>
+                            <Link to="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Resources</Link>
+                            <Link to="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Pricing</Link>
                         </nav>
 
                         {/* Right Side Actions */}
@@ -34,12 +34,12 @@ export default function MarketingLayout() {
                                 </Link>
                             ) : (
                                 <>
-                                    <button onClick={() => login()} className="text-gray-600 hover:text-gray-900 font-medium px-3 py-2 transition-colors">
+                                    <Link to="/login" className="text-gray-600 hover:text-gray-900 font-medium px-3 py-2 transition-colors">
                                         Log in
-                                    </button>
-                                    <button onClick={() => login()} className="bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm">
+                                    </Link>
+                                    <Link to="/login" className="bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm">
                                         Start for free
-                                    </button>
+                                    </Link>
                                 </>
                             )}
                         </div>
@@ -64,9 +64,9 @@ export default function MarketingLayout() {
                 {isMobileMenuOpen && (
                     <div className="md:hidden bg-white border-t border-gray-100 shadow-lg absolute w-full">
                         <div className="px-4 pt-2 pb-6 space-y-2">
-                            <Link to="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Made for</Link>
-                            <Link to="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Resources</Link>
-                            <Link to="#" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Pricing</Link>
+                            <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Made for</a>
+                            <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Resources</Link>
+                            <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Pricing</Link>
                             <div className="border-t border-gray-100 my-2 pt-2">
                                 {user ? (
                                     <Link to="/app" className="block w-full text-center px-4 py-3 rounded-md text-white bg-red-600 hover:bg-red-700 font-medium">
@@ -74,10 +74,10 @@ export default function MarketingLayout() {
                                     </Link>
                                 ) : (
                                     <>
-                                        <button onClick={() => login()} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Log in</button>
-                                        <button onClick={() => login()} className="block w-full text-center px-4 py-3 mt-2 rounded-md text-white bg-red-600 hover:bg-red-700 font-medium">
+                                        <Link to="/login" className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">Log in</Link>
+                                        <Link to="/login" className="block w-full text-center px-4 py-3 mt-2 rounded-md text-white bg-red-600 hover:bg-red-700 font-medium">
                                             Start for free
-                                        </button>
+                                        </Link>
                                     </>
                                 )}
                             </div>

@@ -1,9 +1,99 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function LoginPage() {
-    const { login } = useAuth();
+const DEMO_ACCOUNTS = [
+    { email: 'owner@demo.local', label: 'Demo Owner', description: 'Full admin access — create workspaces, invite members, manage tasks', icon: '👑' },
+    { email: 'member@demo.local', label: 'Demo Member', description: 'Standard access — assigned tasks, team collaboration', icon: '👤' },
+    { email: 'demo@local.test', label: 'Demo User', description: 'Standard seeded account (Demo123!) — verification ready', icon: '🚀' },
+];
 
+const IS_DEMO = import.meta.env.VITE_DEMO_AUTH === 'true';
+
+export default function LoginPage() {
+    const { login, demoLogin } = useAuth();
+    const [loading, setLoading] = useState(null); // email of the account being logged in
+
+    const handleDemoLogin = async (email) => {
+        setLoading(email);
+        try {
+            await demoLogin(email);
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    if (IS_DEMO) {
+        return (
+            <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' }}>
+                <div style={{ maxWidth: 440, width: '100%', padding: '0 16px' }}>
+                    {/* Header */}
+                    <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                        <div style={{ fontSize: 48, marginBottom: 8 }}>🧪</div>
+                        <h1 style={{ color: '#fff', fontSize: 28, fontWeight: 700, margin: 0 }}>DEMO Mode</h1>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 8, fontSize: 14 }}>
+                            Pick a demo account to sign in instantly — no password required.
+                        </p>
+                        <div style={{
+                            display: 'inline-block',
+                            background: 'rgba(255, 200, 0, 0.15)',
+                            border: '1px solid rgba(255,200,0,0.4)',
+                            borderRadius: 8,
+                            padding: '6px 14px',
+                            fontSize: 12,
+                            color: '#ffd700',
+                            marginTop: 12,
+                        }}>
+                            ⚠️ Not for production use
+                        </div>
+                    </div>
+
+                    {/* Account cards */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {DEMO_ACCOUNTS.map(({ email, label, description, icon }) => (
+                            <button
+                                key={email}
+                                onClick={() => handleDemoLogin(email)}
+                                disabled={!!loading}
+                                style={{
+                                    background: loading === email
+                                        ? 'rgba(99, 102, 241, 0.7)'
+                                        : 'rgba(255,255,255,0.07)',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    borderRadius: 14,
+                                    padding: '18px 20px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    textAlign: 'left',
+                                    transition: 'all 0.2s ease',
+                                    backdropFilter: 'blur(10px)',
+                                    opacity: loading && loading !== email ? 0.5 : 1,
+                                }}
+                                onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'rgba(99,102,241,0.25)'; }}
+                                onMouseLeave={e => { if (!loading || loading !== email) e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                                    <span style={{ fontSize: 28 }}>{icon}</span>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ color: '#fff', fontWeight: 600, fontSize: 16 }}>{label}</div>
+                                        <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 3 }}>{description}</div>
+                                        <div style={{ color: 'rgba(99,102,241,0.9)', fontSize: 11, marginTop: 4, fontFamily: 'monospace' }}>{email}</div>
+                                    </div>
+                                    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }}>
+                                        {loading === email ? '⏳' : '→'}
+                                    </div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 24 }}>
+                        DEMO_AUTH=true · Ormmakkurippu Dev Build
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Production: Google-only login ────────────────────────────────────────
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="max-w-md w-full space-y-8 p-8 bg-white shadow rounded-xl">

@@ -18,7 +18,7 @@ export default function AssignedToMePage() {
         try {
             setLoading(true);
             const response = await axios.get('/api/tasks/assigned-to-me');
-            setTasks(response.data);
+            setTasks(response.data.data || response.data);
         } catch (err) {
             console.error('Error fetching assigned tasks:', err);
             setError('Failed to load assigned tasks.');
