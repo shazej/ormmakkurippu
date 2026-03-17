@@ -14,7 +14,9 @@ export const apiLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // Limit each IP to 10 login checking requests per hour
+    // In development, raise the ceiling dramatically so local testing is never blocked.
+    // In production, cap at 10 login attempts per IP per hour.
+    max: process.env.NODE_ENV === 'development' ? 1000 : 10,
     standardHeaders: true,
     legacyHeaders: false,
     message: {

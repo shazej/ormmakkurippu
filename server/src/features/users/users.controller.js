@@ -10,7 +10,10 @@ export class UsersController {
     getProfile = async (req, res) => {
         try {
             const user = await this.service.getProfile(req.user.uid);
-            if (!user) return sendError(res, 'User not found', 404);
+            if (!user) {
+                // Return 404 so AuthContext.refreshUser can detect stale sessions
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
             sendSuccess(res, user);
         } catch (error) {
             sendError(res, error);
@@ -29,7 +32,7 @@ export class UsersController {
             const result = schema.safeParse(req.body);
             if (!result.success) {
                 const msg = result.error.errors[0]?.message || 'Invalid input.';
-                return sendError(res, msg, 400);
+                return res.status(400).json({ success: false, message: msg });
             }
 
             const updatedUser = await this.service.updateProfile(req.user.uid, result.data);

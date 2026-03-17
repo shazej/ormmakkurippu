@@ -92,8 +92,14 @@ export function AuthProvider({ children }) {
                 localStorage.setItem('auth_user', JSON.stringify(userData));
             }
         } catch (err) {
-            // 401 means token expired/invalid → clear session
-            if (err.response?.status === 401) _clearSession();
+            // Clear session if server says the token/user is invalid:
+            //   401 → token expired or not recognised
+            //   404 → user was deleted from DB but token still valid
+            //   5xx → server error; better to force re-login than stay in a broken state
+            const status = err.response?.status;
+            if (status === 401 || status === 404 || status >= 500) {
+                _clearSession();
+            }
         }
     }, []);
 
