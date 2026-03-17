@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function LandingPage() {
-    const { user, login } = useAuth();
+    const { user } = useAuth();
+    // TODO[google-auth]: Restore login() from useAuth when Google OAuth is re-enabled
 
     useEffect(() => {
         document.title = "Ormmakurippu - Organize your work and life";
@@ -42,9 +43,9 @@ export default function LandingPage() {
                                     </Link>
                                 ) : (
                                     <>
-                                        <button onClick={() => login()} className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                        <Link to="/signup" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                                             Start for free
-                                        </button>
+                                        </Link>
                                         <div className="hidden sm:flex items-center text-gray-500 text-sm font-medium">
                                             <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -165,9 +166,9 @@ export default function LandingPage() {
                             Go to App
                         </Link>
                     ) : (
-                        <button onClick={() => login()} className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-500 transition-colors inline-block">
+                        <Link to="/signup" className="bg-red-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-red-500 transition-colors inline-block">
                             Start for free
-                        </button>
+                        </Link>
                     )}
                 </div>
             </section>

@@ -13,7 +13,7 @@ export default function InviteTeamStep({ onNext }) {
         // Fetch current workspace (should be the one just created)
         const fetchWorkspace = async () => {
             try {
-                const res = await axios.get('http://localhost:4000/api/workspaces/current', {
+                const res = await axios.get('/api/workspaces/current', {
                     withCredentials: true
                 });
                 if (res.data.success) {
@@ -50,19 +50,20 @@ export default function InviteTeamStep({ onNext }) {
 
         setLoading(true);
         try {
-            const res = await axios.post(`http://localhost:4000/api/workspaces/${workspaceId}/invite`, {
-                emails: emailList
-            }, { withCredentials: true });
-
-            if (res.data.success) {
-                setSuccessMsg(`Invited ${emailList.length} members!`);
-                setTimeout(() => {
-                    onNext();
-                }, 1000);
-            }
+            // Send individual invite requests (API accepts { email, role })
+            await Promise.all(
+                emailList.map(email =>
+                    axios.post(`/api/workspaces/${workspaceId}/invite`, {
+                        email: email.trim().toLowerCase(),
+                        role: 'MEMBER',
+                    }, { withCredentials: true })
+                )
+            );
+            setSuccessMsg(`Invited ${emailList.length} member${emailList.length !== 1 ? 's' : ''}!`);
+            setTimeout(() => { onNext(); }, 1000);
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.error?.[0]?.message || err.response?.data?.error || 'Failed to send invites');
+            setError(err.response?.data?.message || 'Failed to send invites');
         } finally {
             setLoading(false);
         }

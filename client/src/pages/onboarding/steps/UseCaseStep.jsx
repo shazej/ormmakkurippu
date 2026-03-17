@@ -16,7 +16,7 @@ export default function UseCaseStep({ onNext }) {
 
         setLoading(true);
         try {
-            await axios.patch('http://localhost:4000/api/users/me', {
+            await axios.patch('/api/users/me', {
                 use_case: selected
             }, { withCredentials: true });
 

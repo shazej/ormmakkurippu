@@ -37,80 +37,82 @@ export class WorkspacesService {
         });
     }
 
-    async inviteMember(user, workspaceId, emails) {
-        // Check permissions
+    async inviteMember(user, workspaceId, email, role = 'MEMBER') {
         const workspace = await this.repository.findById(workspaceId);
         if (!workspace) throw new Error('Workspace not found');
 
-        // Verify ownership (or admin role if we had it, but specs say owner)
         if (workspace.owner_user_id !== user.uid) {
             throw new Error('Only workspace owner can invite members');
         }
 
-        const results = [];
+        const normalizedEmail = email.toLowerCase().trim();
 
-        for (const email of emails) {
-            const normalizedEmail = email.toLowerCase();
-
-            // Validation: Start
-            // 1. Check if already a member/invited in workspace (via repository or member list)
-            const existingMember = await this.repository.findMember(workspaceId, normalizedEmail);
-            if (existingMember) {
-                results.push({ email, status: 'ALREADY_MEMBER' });
-                continue;
-            }
-
-            // 2. Check if user exists in the system
-            const existingUser = await prisma.user.findUnique({ where: { primary_email_id: normalizedEmail } });
-
-            if (existingUser) {
-                // Auto-accept: Create Member (ACTIVE) + Invite (ACCEPTED)
-                await prisma.$transaction([
-                    prisma.workspaceMember.create({
-                        data: {
-                            workspace_id: workspaceId,
-                            user_id: existingUser.id,
-                            email: normalizedEmail,
-                            role: 'MEMBER',
-                            status: 'ACTIVE',
-                            joined_at: new Date()
-                        }
-                    }),
-                    prisma.workspaceInvite.create({
-                        data: {
-                            workspace_id: workspaceId,
-                            email: normalizedEmail,
-                            invited_by_user_id: user.uid,
-                            status: 'ACCEPTED'
-                        }
-                    })
-                ]);
-                results.push({ email, status: 'ADDED' });
-            } else {
-                // Pending: Create Member (PENDING) + Invite (PENDING)
-                await prisma.$transaction([
-                    prisma.workspaceMember.create({
-                        data: {
-                            workspace_id: workspaceId,
-                            email: normalizedEmail,
-                            role: 'MEMBER',
-                            status: 'PENDING'
-                        }
-                    }),
-                    prisma.workspaceInvite.create({
-                        data: {
-                            workspace_id: workspaceId,
-                            email: normalizedEmail,
-                            invited_by_user_id: user.uid,
-                            status: 'PENDING'
-                        }
-                    })
-                ]);
-                results.push({ email, status: 'INVITED' });
-            }
+        const existingMember = await this.repository.findMember(workspaceId, normalizedEmail);
+        if (existingMember) {
+            return { email: normalizedEmail, status: 'ALREADY_MEMBER' };
         }
 
-        return results;
+        const existingUser = await prisma.user.findUnique({
+            where: { primary_email_id: normalizedEmail }
+        });
+
+        if (existingUser) {
+            await prisma.$transaction([
+                prisma.workspaceMember.create({
+                    data: {
+                        workspace_id: workspaceId,
+                        user_id: existingUser.id,
+                        email: normalizedEmail,
+                        role,
+                        status: 'ACTIVE',
+                        joined_at: new Date()
+                    }
+                }),
+                prisma.workspaceInvite.create({
+                    data: {
+                        workspace_id: workspaceId,
+                        email: normalizedEmail,
+                        invited_by_user_id: user.uid,
+                        status: 'ACCEPTED'
+                    }
+                })
+            ]);
+            return { email: normalizedEmail, status: 'ADDED', role };
+        } else {
+            await prisma.$transaction([
+                prisma.workspaceMember.create({
+                    data: {
+                        workspace_id: workspaceId,
+                        email: normalizedEmail,
+                        role,
+                        status: 'PENDING'
+                    }
+                }),
+                prisma.workspaceInvite.create({
+                    data: {
+                        workspace_id: workspaceId,
+                        email: normalizedEmail,
+                        invited_by_user_id: user.uid,
+                        status: 'PENDING'
+                    }
+                })
+            ]);
+            return { email: normalizedEmail, status: 'INVITED', role };
+        }
+    }
+
+    async updateWorkspace(user, workspaceId, data) {
+        const workspace = await this.repository.findById(workspaceId);
+        if (!workspace) throw new Error('Workspace not found');
+
+        if (workspace.owner_user_id !== user.uid) {
+            throw new Error('Only workspace owner can update workspace settings');
+        }
+
+        return prisma.workspace.update({
+            where: { id: workspaceId },
+            data: { name: data.name },
+        });
     }
 
     // Auto-create default workspace if user has none

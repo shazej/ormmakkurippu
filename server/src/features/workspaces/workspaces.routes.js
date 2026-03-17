@@ -10,6 +10,7 @@ router.use(authenticateUser);
 router.get('/current', controller.getCurrentWorkspace);
 router.get('/', controller.getWorkspaces);
 router.post('/', controller.createWorkspace);
+router.patch('/:id', controller.updateWorkspace);
 router.post('/:id/invite', controller.inviteMember);
 
 export default router;

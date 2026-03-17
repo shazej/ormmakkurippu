@@ -34,14 +34,40 @@ export class WorkspacesController {
     inviteMember = async (req, res) => {
         try {
             const schema = z.object({
-                emails: z.array(z.string().email()).min(1)
+                email: z.string().email().toLowerCase().trim(),
+                role: z.enum(['ADMIN', 'MEMBER', 'GUEST']).default('MEMBER'),
             });
             const result = schema.safeParse(req.body);
-            if (!result.success) return sendError(res, result.error.errors, 400);
+            if (!result.success) {
+                const msg = result.error.errors[0]?.message || 'Invalid input.';
+                return sendError(res, msg, 400);
+            }
 
-            const { id } = req.params; // workspaceId
-            const results = await this.service.inviteMember(req.user, id, result.data.emails);
-            sendSuccess(res, results, 'Invites processed');
+            const { id } = req.params;
+            const outcome = await this.service.inviteMember(
+                req.user, id, result.data.email, result.data.role
+            );
+            sendSuccess(res, outcome, 'Invite processed');
+        } catch (error) {
+            sendError(res, error);
+        }
+    }
+
+    updateWorkspace = async (req, res) => {
+        try {
+            const schema = z.object({
+                name: z.string().min(1).max(100).trim(),
+            });
+            const result = schema.safeParse(req.body);
+            if (!result.success) {
+                const msg = result.error.errors[0]?.message || 'Invalid input.';
+                return sendError(res, msg, 400);
+            }
+
+            const workspace = await this.service.updateWorkspace(
+                req.user, req.params.id, result.data
+            );
+            sendSuccess(res, workspace, 'Workspace updated');
         } catch (error) {
             sendError(res, error);
         }

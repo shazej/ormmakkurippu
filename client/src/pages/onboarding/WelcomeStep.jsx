@@ -11,7 +11,7 @@ export default function WelcomeStep() {
     const handleComplete = async () => {
         setLoading(true);
         try {
-            await axios.post('http://localhost:4000/api/onboarding/complete', {}, {
+            await axios.post('/api/onboarding/complete', {}, {
                 withCredentials: true
             });
             await refreshUser(); // Update context to reflect completed status

@@ -29,7 +29,7 @@ export default function OnboardingWizard() {
 
     const fetchStatus = async () => {
         try {
-            const res = await axios.get('http://localhost:4000/api/onboarding/status', {
+            const res = await axios.get('/api/onboarding/status', {
                 withCredentials: true
             });
             if (res.data.success) {
@@ -77,7 +77,7 @@ export default function OnboardingWizard() {
         }
 
         try {
-            await axios.post('http://localhost:4000/api/onboarding/step', { step: nextStep }, {
+            await axios.post('/api/onboarding/step', { step: nextStep }, {
                 withCredentials: true
             });
             setCurrentStep(nextStep);

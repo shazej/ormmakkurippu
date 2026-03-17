@@ -261,7 +261,7 @@ model Contact {
   id            String   @id @default(uuid())
   owner_user_id String
   name          String?
-  phone_e164    String   // E.164 format +1234567890
+  phone_e164    String?  // E.164 format +1234567890 (optional)
   email         String?
   company       String?
   tags          String[] @default([])
@@ -281,12 +281,13 @@ model CallLog {
   id            String   @id @default(uuid())
   owner_user_id String
   contact_id    String?
-  caller_phone_e164 String
+  caller_phone_e164 String?
   caller_name   String?
   direction     String   // "INCOMING", "OUTGOING"
   call_time     DateTime @default(now())
   duration_sec  Int?
   notes         String?
+  outcome       String?  // "ANSWERED", "NO_ANSWER", "VOICEMAIL", "BUSY"
   source        String   @default("MANUAL") // "MANUAL", "WEBHOOK", "IMPORT"
   created_at    DateTime @default(now())
 

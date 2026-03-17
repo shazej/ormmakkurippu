@@ -23,7 +23,7 @@ export default function Step1({ onNext }) {
 
         try {
             // Update profile
-            await axios.patch('http://localhost:4000/api/users/me', {
+            await axios.patch('/api/users/me', {
                 display_name: displayName,
                 avatar_url: avatarUrl
             }, {
