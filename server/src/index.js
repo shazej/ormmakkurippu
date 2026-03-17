@@ -31,6 +31,7 @@ import linkedAccountsRoutes from './features/linked-accounts/linked-accounts.rou
 import accountClosureRoutes from './features/account-closure/account-closure.routes.js';
 import settingsRoutes from './features/settings/settings.routes.js';
 import onboardingRoutes from './features/onboarding/onboarding.routes.js';
+import taskSharingRoutes from './features/task-sharing/task-sharing.routes.js';
 
 import { SecurityService } from './features/security/security.service.js';
 import { UsersRepository } from './features/users/users.repository.js';
@@ -344,6 +345,8 @@ app.use('/api/linked-accounts', linkedAccountsRoutes);
 app.use('/api/account-closure', accountClosureRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+// Public — no auth middleware. Rate-limited by the global apiLimiter above.
+app.use('/api/shared', taskSharingRoutes);
 
 // Error Handling Middleware (MUST be last)
 import { errorHandler } from './middleware/error-handler.js';

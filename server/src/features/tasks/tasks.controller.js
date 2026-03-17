@@ -1,4 +1,5 @@
 import { TasksService } from './tasks.service.js';
+import { AppError } from '../../utils/app-error.js';
 import { sendSuccess, sendError } from '../../utils/api-response.js';
 import { z } from 'zod';
 
@@ -160,6 +161,53 @@ export class TasksController {
             console.error('[TasksController] assignTask Error:', error);
             if (next) next(error);
             else sendError(res, error);
+        }
+    }
+
+    // ── Share link management (owner-only, authenticated) ──────────────────
+
+    shareTask = async (req, res) => {
+        try {
+            const schema = z.object({
+                expiresIn: z.enum(['1h', '24h', '7d', '30d', 'never']).optional().default('7d')
+            });
+
+            const result = schema.safeParse(req.body);
+            // Pass a proper AppError so sendError can read .statusCode correctly
+            if (!result.success) {
+                return sendError(res, new AppError('Validation failed: invalid expiresIn value', 400));
+            }
+
+            const link = await this.service.shareTask(req.params.id, req.user, result.data);
+            sendSuccess(res, link, 'Share link created', 201);
+        } catch (error) {
+            console.error('[TasksController] shareTask Error:', error);
+            sendError(res, error);
+        }
+    }
+
+    listShareLinks = async (req, res) => {
+        try {
+            const links = await this.service.listShareLinks(req.params.id, req.user);
+            sendSuccess(res, links);
+        } catch (error) {
+            console.error('[TasksController] listShareLinks Error:', error);
+            sendError(res, error);
+        }
+    }
+
+    revokeShareLink = async (req, res) => {
+        try {
+            const { token } = req.params;
+            if (!token || token.length < 20 || token.length > 100) {
+                return sendError(res, new AppError('Invalid token format', 400));
+            }
+
+            const result = await this.service.revokeShareLink(req.params.id, token, req.user);
+            sendSuccess(res, result, 'Share link revoked');
+        } catch (error) {
+            console.error('[TasksController] revokeShareLink Error:', error);
+            sendError(res, error);
         }
     }
 }

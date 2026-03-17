@@ -56,6 +56,7 @@ model User {
   owned_workspaces    Workspace[]
   workspace_memberships WorkspaceMember[]
   sent_invites        WorkspaceInvite[]
+  created_share_links TaskShareLink[]
 
   @@map("users")
 }
@@ -252,6 +253,8 @@ model Task {
   related_contact_id  String?
   caller_phone_e164   String?   // Denormalized for display
 
+  share_links TaskShareLink[]
+
   @@index([user_id])
   @@index([assigned_to_user_id])
   @@map("tasks")
@@ -426,4 +429,36 @@ model GroupMember {
   @@index([group_id])
   @@index([user_id])
   @@map("group_members")
+}
+
+// --- Task Sharing ---
+
+model TaskShareLink {
+  id               String    @id @default(uuid())
+  task_id          String
+  token            String    @unique  // crypto.randomBytes(32).toString('base64url')
+  created_by       String             // user_id of the task owner who created this link
+
+  // Optional expiry. NULL means the link never expires.
+  expires_at       DateTime?
+
+  // Granular permissions — stored as JSON so we can extend without migrations.
+  // Current schema: { "view": true }
+  permissions      Json      @default("{\"view\": true}")
+
+  // Access telemetry
+  access_count     Int       @default(0)
+  last_accessed_at DateTime?
+
+  // Soft revocation (we keep the row for audit purposes)
+  revoked_at       DateTime?
+
+  created_at       DateTime  @default(now())
+
+  task             Task      @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  creator          User      @relation(fields: [created_by], references: [id], onDelete: Cascade)
+
+  @@index([task_id])
+  @@index([token])
+  @@map("task_share_links")
 }

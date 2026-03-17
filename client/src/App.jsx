@@ -12,6 +12,7 @@ import OnboardingWizard from './pages/onboarding/OnboardingWizard';
 import WelcomeStep from './pages/onboarding/WelcomeStep';
 
 import LoginPage from './pages/LoginPage';
+import SharedTaskPage from './pages/SharedTaskPage';
 import { useLocation } from 'react-router-dom';
 
 // Protected Route Wrapper
@@ -19,7 +20,11 @@ function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
     const location = useLocation();
 
-    if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+    if (loading) return (
+        <div className="h-screen flex flex-col items-center justify-center gap-4">
+            <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+    );
     if (!user) return <Navigate to="/login" replace />;
 
     // Enforce onboarding
@@ -41,6 +46,8 @@ function AppRoutes() {
         <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
+            {/* Public shared-task viewer — no auth required */}
+            <Route path="/shared/task/:token" element={<SharedTaskPage />} />
 
             <Route element={<MarketingLayout />}>
                 <Route path="/" element={<LandingPage />} />

@@ -56,7 +56,7 @@ export default function WorkspaceStep({ onNext }) {
                             setWorkspaceName(e.target.value);
                             if (error) setError('');
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-400 transition-colors outline-none"
                         placeholder="e.g. Acme Corp, My Design Studio"
                         autoFocus
                     />
@@ -67,8 +67,8 @@ export default function WorkspaceStep({ onNext }) {
                     type="submit"
                     disabled={loading || workspaceName.trim().length < 2}
                     className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-colors ${loading || workspaceName.trim().length < 2
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-indigo-600 hover:bg-indigo-700'
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700 text-white'
                         }`}
                 >
                     {loading ? 'Creating...' : 'Continue'}

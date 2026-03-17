@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import TaskForm from '../components/TaskForm';
+import TaskSharePanel from '../components/TaskSharePanel';
 
 function TaskDetailsPage() {
     const { id } = useParams();
@@ -80,6 +81,10 @@ function TaskDetailsPage() {
                     <p>Created At: {new Date(task.createdAt || task.created_at).toLocaleString()}</p>
                     {(task.updatedAt || task.updated_at) && <p>Last Updated: {new Date(task.updatedAt || task.updated_at).toLocaleString()}</p>}
                 </div>
+
+                {/* Share link management — only visible to the task owner.
+                    TaskSharePanel handles the 403 case internally (renders null). */}
+                <TaskSharePanel taskId={id} />
             </div>
         </div>
     );

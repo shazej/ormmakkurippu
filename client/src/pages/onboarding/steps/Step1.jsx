@@ -87,7 +87,7 @@ export default function Step1({ onNext }) {
                                 value={avatarUrl}
                                 onChange={(e) => setAvatarUrl(e.target.value)}
                                 placeholder="https://example.com/avatar.jpg"
-                                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                className="shadow-sm focus:ring-red-500 focus:border-red-500 block w-full sm:text-sm border-gray-300 rounded-md"
                             />
                         </div>
                         <p className="mt-1 text-xs text-gray-500">
@@ -108,7 +108,7 @@ export default function Step1({ onNext }) {
                             value={displayName}
                             onChange={(e) => setDisplayName(e.target.value)}
                             required
-                            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2"
+                            className="shadow-sm focus:ring-red-500 focus:border-red-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2"
                         />
                     </div>
                 </div>
@@ -117,7 +117,7 @@ export default function Step1({ onNext }) {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                        className={`ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                     >
                         {loading ? 'Saving...' : 'Continue'}
                     </button>

@@ -97,7 +97,7 @@ export default function TaskCard({ task, isAssigned, onUpdate }) {
                                 />
                             </div>
                         ) : (
-                            <Link to={`/tasks/${task.id}`} className="flex-1">
+                            <Link to={`/app/tasks/${task.id}`} className="flex-1">
                                 <h3 className={`font-semibold text-lg text-gray-900 group ${task.status === 'Completed' ? 'line-through text-gray-400' : ''}`}>
                                     {task.title || task.description?.substring(0, 30) || 'Untitled'}
                                     {!isAssigned && (
@@ -125,7 +125,7 @@ export default function TaskCard({ task, isAssigned, onUpdate }) {
                         </span>
                     </div>
 
-                    <Link to={`/tasks/${task.id}`}>
+                    <Link to={`/app/tasks/${task.id}`}>
                         <div className="mt-1 flex gap-2 text-sm text-gray-600">
                             {task.priority && <span className="font-medium text-gray-500">{task.priority} Priority</span>}
                             {task.category && <span>• {task.category}</span>}

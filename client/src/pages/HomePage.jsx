@@ -1,143 +1,250 @@
-import { useState, useEffect } from 'react'
-import axios from 'axios'
-import { useOutletContext } from 'react-router-dom'
-import { templates } from '../templates'
-import TaskForm from '../components/TaskForm'
-import TaskCard from '../components/TaskCard'
-import { useAuth } from '../context/AuthContext'
+/**
+ * HomePage — Inbox view
+ *
+ * Clean task list modelled after Todoist's inbox:
+ *  - Inline "Add task" row at the top
+ *  - Flat list of task items with priority indicator + completion toggle
+ *  - Minimal metadata: due date, category, priority
+ *  - No inline TaskForm — quick-add goes to CreateTaskModal via sidebar
+ */
 
-export default function HomePage() {
-    const { user } = useAuth();
-    const { tasks, fetchTasks } = useOutletContext();
-    const [formInitialData, setFormInitialData] = useState(null)
-    const [createTaskError, setCreateTaskError] = useState(null)
-    const [searchQuery, setSearchQuery] = useState('')
-    const [debouncedSearch, setDebouncedSearch] = useState('')
+import { useState } from 'react';
+import { useOutletContext, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
+import { Plus, Calendar, CheckCircle2, Circle } from 'lucide-react';
 
-    // Debounce Logic
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchQuery)
-        }, 300)
-        return () => clearTimeout(timer)
-    }, [searchQuery])
+const PRIORITY_COLOR = {
+    High:   'text-red-500',
+    Medium: 'text-amber-500',
+    Low:    'text-blue-400',
+};
 
-    // Fetch on debounced change
-    useEffect(() => {
-        fetchTasks(debouncedSearch)
-    }, [debouncedSearch])
+const STATUS_BADGE = {
+    Completed:   'bg-green-50 text-green-700',
+    'In Progress': 'bg-blue-50 text-blue-700',
+    Pending:     'bg-gray-100 text-gray-500',
+};
 
-    const handleTemplateClick = (template) => {
-        setCreateTaskError(null);
-        setFormInitialData({
-            category: template.category,
-            description: template.description,
-            priority: template.priority,
-        });
-    }
+function formatDue(iso) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const isPast  = d < now && !isToday;
+    const label   = isToday ? 'Today' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return { label, isPast };
+}
 
-    const handleSubmit = async (formData) => {
-        setCreateTaskError(null);
+// ── Single task row ───────────────────────────────────────────────────────────
+function TaskRow({ task, onUpdate }) {
+    const [toggling, setToggling] = useState(false);
+
+    const handleToggle = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (toggling) return;
+        setToggling(true);
+        const next = task.status === 'Completed' ? 'Pending' : 'Completed';
         try {
-            await axios.post('/api/tasks', formData)
-            setFormInitialData(null)
-            fetchTasks()
-            // Optional: toast success
-        } catch (error) {
-            console.error('Error creating task:', error);
-
-            let errorMessage = 'Error creating task';
-            if (error.response?.data) {
-                const { message, errors } = error.response.data;
-                if (message) errorMessage = message;
-                if (errors && Array.isArray(errors)) {
-                    const validationMessages = errors.map(e => `• ${e.message}`).join('\n');
-                    errorMessage += `:\n${validationMessages}`;
-                }
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            setCreateTaskError(errorMessage);
+            await axios.patch(`/api/tasks/${task.id}`, { status: next });
+            onUpdate();
+        } catch (err) {
+            console.error('Toggle failed', err);
+        } finally {
+            setToggling(false);
         }
+    };
+
+    const due = formatDue(task.due_date || task.dueDate);
+    const done = task.status === 'Completed';
+
+    return (
+        <Link
+            to={`/app/tasks/${task.id}`}
+            className="group flex items-start gap-3 px-2 py-3 rounded-xl hover:bg-gray-50 transition-colors"
+        >
+            {/* Completion circle */}
+            <button
+                onClick={handleToggle}
+                className={`mt-0.5 shrink-0 transition-colors ${
+                    done
+                        ? 'text-green-500 hover:text-gray-400'
+                        : `${PRIORITY_COLOR[task.priority] || 'text-gray-300'} hover:text-gray-500`
+                }`}
+                aria-label={done ? 'Mark pending' : 'Mark complete'}
+            >
+                {done
+                    ? <CheckCircle2 size={18} />
+                    : <Circle size={18} />
+                }
+            </button>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                <p className={`text-sm leading-snug ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                    {task.title || task.description?.substring(0, 60) || 'Untitled'}
+                </p>
+
+                {/* Metadata chips */}
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {due && (
+                        <span className={`flex items-center gap-1 text-[11px] ${due.isPast ? 'text-red-500' : 'text-gray-400'}`}>
+                            <Calendar size={11} />
+                            {due.label}
+                        </span>
+                    )}
+                    {task.category && task.category !== 'General' && (
+                        <span className="text-[11px] text-gray-400">{task.category}</span>
+                    )}
+                    {task.assigned_to_email && (
+                        <span className="text-[11px] text-blue-500">→ {task.assigned_to_email}</span>
+                    )}
+                </div>
+            </div>
+
+            {/* Status badge (only for non-pending) */}
+            {task.status !== 'Pending' && (
+                <span className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full self-start mt-0.5 ${STATUS_BADGE[task.status] || STATUS_BADGE.Pending}`}>
+                    {task.status}
+                </span>
+            )}
+        </Link>
+    );
+}
+
+// ── Quick-add row ─────────────────────────────────────────────────────────────
+function QuickAdd({ onCreated }) {
+    const [open, setOpen]     = useState(false);
+    const [title, setTitle]   = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const submit = async (e) => {
+        e.preventDefault();
+        if (!title.trim()) return;
+        setLoading(true);
+        try {
+            await axios.post('/api/tasks', { title: title.trim(), priority: 'Medium', status: 'Pending' });
+            setTitle('');
+            setOpen(false);
+            onCreated();
+        } catch (err) {
+            console.error('Quick add failed', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!open) {
+        return (
+            <button
+                onClick={() => setOpen(true)}
+                className="flex items-center gap-2 px-2 py-2.5 w-full text-sm text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors group"
+            >
+                <Plus size={16} className="shrink-0 group-hover:text-red-600" />
+                Add task
+            </button>
+        );
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">Welcome, {user?.name}</h1>
+        <form onSubmit={submit} className="border border-gray-200 rounded-xl p-3 space-y-2">
+            <input
+                autoFocus
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                onKeyDown={e => e.key === 'Escape' && setOpen(false)}
+                placeholder="Task name"
+                className="w-full text-sm text-gray-900 placeholder-gray-400 border-0 focus:outline-none"
+            />
+            <div className="flex gap-2 justify-end">
+                <button
+                    type="button"
+                    onClick={() => { setOpen(false); setTitle(''); }}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    disabled={!title.trim() || loading}
+                    className="px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                    {loading ? 'Adding…' : 'Add task'}
+                </button>
+            </div>
+        </form>
+    );
+}
 
-            {/* Search Bar */}
-            <div className="mb-6 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                </div>
-                <input
-                    type="text"
-                    placeholder="Search tasks..."
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-200 sm:text-sm transition duration-150 ease-in-out"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
+// ── Page ──────────────────────────────────────────────────────────────────────
+export default function HomePage() {
+    const { user } = useAuth();
+    const { tasks, fetchTasks, loading } = useOutletContext();
+
+    const myTasks       = (tasks || []).filter(t => !t.deleted_at);
+    const pending       = myTasks.filter(t => t.status !== 'Completed');
+    const completed     = myTasks.filter(t => t.status === 'Completed');
+
+    return (
+        <div>
+            {/* Page heading */}
+            <div className="mb-6">
+                <h1 className="text-xl font-bold text-gray-900">Inbox</h1>
+                <p className="text-sm text-gray-400 mt-0.5">
+                    {pending.length} task{pending.length !== 1 ? 's' : ''} remaining
+                </p>
             </div>
 
-            <div className="mb-8">
-                {/* Templates */}
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Quick Templates</label>
-                    <div className="flex flex-wrap gap-2">
-                        {templates.map(template => (
-                            <button
-                                key={template.id}
-                                type="button"
-                                onClick={() => handleTemplateClick(template)}
-                                className="bg-gray-100 hover:bg-blue-50 text-gray-700 hover:text-blue-600 px-3 py-1 rounded-full text-sm transition-colors border border-gray-200"
-                            >
-                                {template.label}
-                            </button>
+            {/* Task list */}
+            <div className="space-y-0">
+                {loading ? (
+                    <div className="space-y-3 py-4">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="flex items-center gap-3 px-2 py-3">
+                                <div className="w-[18px] h-[18px] rounded-full bg-gray-100 animate-pulse shrink-0" />
+                                <div className="flex-1 space-y-1.5">
+                                    <div className="h-3 bg-gray-100 rounded-full w-3/4 animate-pulse" />
+                                    <div className="h-2 bg-gray-100 rounded-full w-1/4 animate-pulse" />
+                                </div>
+                            </div>
                         ))}
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {pending.length === 0 && completed.length === 0 && (
+                            <div className="text-center py-16 text-gray-400">
+                                <div className="text-4xl mb-3">✅</div>
+                                <p className="text-sm font-medium text-gray-500">Inbox zero!</p>
+                                <p className="text-xs mt-1">Add a task below to get started.</p>
+                            </div>
+                        )}
 
-                <TaskForm
-                    initialData={formInitialData}
-                    onSubmit={handleSubmit}
-                    buttonText="Add Task"
-                    error={createTaskError}
-                />
-            </div>
+                        {pending.map(task => (
+                            <TaskRow key={task.id} task={task} onUpdate={fetchTasks} />
+                        ))}
 
-            <div className="grid md:grid-cols-2 gap-8">
-                {/* My Tasks */}
-                <section>
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                        My Tasks
-                    </h2>
-                    {tasks.filter(t => t.uid === (user?.uid || user?.id)).length === 0 ? (
-                        <p className="text-gray-500 text-sm italic">No tasks created yet.</p>
-                    ) : (
-                        tasks.filter(t => t.uid === (user?.uid || user?.id)).map(task => (
-                            <TaskCard key={task.id} task={task} onUpdate={fetchTasks} />
-                        ))
-                    )}
-                </section>
+                        {/* Inline quick-add */}
+                        <div className="pt-2">
+                            <QuickAdd onCreated={fetchTasks} />
+                        </div>
 
-                {/* Assigned to Me */}
-                <section>
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        Assigned to Me
-                    </h2>
-                    {tasks.filter(t => t.assigned_to_user_id === (user?.uid || user?.id) || t.assigned_to_email === user?.email).length === 0 ? (
-                        <p className="text-gray-500 text-sm italic">No tasks assigned to you.</p>
-                    ) : (
-                        tasks.filter(t => t.assigned_to_user_id === (user?.uid || user?.id) || t.assigned_to_email === user?.email).map(task => (
-                            <TaskCard key={task.id} task={task} isAssigned={true} onUpdate={fetchTasks} />
-                        ))
-                    )}
-                </section>
+                        {/* Completed section */}
+                        {completed.length > 0 && (
+                            <details className="mt-6">
+                                <summary className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 py-2 cursor-pointer hover:text-gray-600 select-none">
+                                    Completed · {completed.length}
+                                </summary>
+                                <div className="mt-1 opacity-60">
+                                    {completed.map(task => (
+                                        <TaskRow key={task.id} task={task} onUpdate={fetchTasks} />
+                                    ))}
+                                </div>
+                            </details>
+                        )}
+                    </>
+                )}
             </div>
         </div>
-    )
+    );
 }

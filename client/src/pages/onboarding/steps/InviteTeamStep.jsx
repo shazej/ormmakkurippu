@@ -85,7 +85,7 @@ export default function InviteTeamStep({ onNext }) {
                     <textarea
                         value={emails}
                         onChange={(e) => setEmails(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors h-32"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors h-32"
                         placeholder="colleague@example.com, partner@work.com"
                     />
                     <p className="mt-2 text-xs text-gray-500">Separate multiple emails with commas or new lines.</p>
@@ -105,8 +105,8 @@ export default function InviteTeamStep({ onNext }) {
                         type="submit"
                         disabled={loading || !emails.trim()}
                         className={`flex-1 py-3 px-4 rounded-lg text-white font-medium transition-colors ${loading || !emails.trim()
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-indigo-600 hover:bg-indigo-700'
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700'
                             }`}
                     >
                         {loading ? 'Sending...' : 'Send Invites'}

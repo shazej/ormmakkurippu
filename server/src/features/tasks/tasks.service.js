@@ -1,14 +1,25 @@
 import { TasksRepository } from './tasks.repository.js';
 import { UsersRepository } from '../users/users.repository.js';
+import { TaskSharingRepository } from '../task-sharing/task-sharing.repository.js';
 import { AppError } from '../../utils/app-error.js';
 
 import { maskPhone } from '../../utils/phone-utils.js';
 import { ensureTaskAccess } from './task-auth.js';
 
+// Expiry presets: convert human-readable durations to milliseconds
+const EXPIRY_PRESETS = {
+    '1h':    60 * 60 * 1000,
+    '24h':   24 * 60 * 60 * 1000,
+    '7d':    7 * 24 * 60 * 60 * 1000,
+    '30d':   30 * 24 * 60 * 60 * 1000,
+    'never': null
+};
+
 export class TasksService {
     constructor() {
         this.repository = new TasksRepository();
         this.usersRepository = new UsersRepository();
+        this.sharingRepository = new TaskSharingRepository();
     }
 
     async getTasks(user, filters = {}, pagination = {}) {
@@ -148,13 +159,83 @@ export class TasksService {
         return this.repository.update(id, updates);
     }
 
-    async shareTask(id, user) {
-        // Not implemented in DB schema for now
-        throw new AppError('Sharing via link temporarily disabled', 501);
+    /**
+     * Create a share link for a task.
+     * Only the task owner can create share links.
+     *
+     * @param {string} id - Task ID
+     * @param {object} user - Authenticated user (req.user)
+     * @param {object} options - { expiresIn: '1h'|'24h'|'7d'|'30d'|'never' }
+     * @returns {{ shareUrl, token, expiresAt, id }}
+     */
+    async shareTask(id, user, options = {}) {
+        const task = await this.repository.findById(id);
+        if (!task) throw new AppError('Task not found', 404);
+        if (task.user_id !== user.uid) throw new AppError('Forbidden: Only the task owner can create share links', 403);
+        if (task.deleted_at) throw new AppError('Cannot share a deleted task', 400);
+
+        const expiresIn = options.expiresIn || '7d';
+        if (!Object.keys(EXPIRY_PRESETS).includes(expiresIn)) {
+            throw new AppError(`Invalid expiresIn. Allowed: ${Object.keys(EXPIRY_PRESETS).join(', ')}`, 400);
+        }
+
+        const expiresAt = EXPIRY_PRESETS[expiresIn]
+            ? new Date(Date.now() + EXPIRY_PRESETS[expiresIn])
+            : null;
+
+        const link = await this.sharingRepository.create(id, user.uid, expiresAt);
+
+        const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+        const shareUrl = `${clientOrigin}/shared/task/${link.token}`;
+
+        return {
+            id: link.id,
+            token: link.token,
+            shareUrl,
+            expiresAt: link.expires_at,
+            createdAt: link.created_at
+        };
     }
 
-    async getSharedTask(token) {
-        throw new AppError('Sharing via link temporarily disabled', 501);
+    /**
+     * List all share links for a task.
+     * Only the task owner can view this list.
+     */
+    async listShareLinks(id, user) {
+        const task = await this.repository.findById(id);
+        if (!task) throw new AppError('Task not found', 404);
+        if (task.user_id !== user.uid) throw new AppError('Forbidden', 403);
+
+        const links = await this.sharingRepository.findByTaskId(id);
+        const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+
+        return links.map(link => ({
+            id: link.id,
+            token: link.token,
+            shareUrl: `${clientOrigin}/shared/task/${link.token}`,
+            expiresAt: link.expires_at,
+            revokedAt: link.revoked_at,
+            accessCount: link.access_count,
+            lastAccessedAt: link.last_accessed_at,
+            createdAt: link.created_at,
+            // Derived convenience field
+            isActive: !link.revoked_at && (!link.expires_at || link.expires_at > new Date())
+        }));
+    }
+
+    /**
+     * Revoke a specific share link by token.
+     * Only the task owner can revoke links.
+     */
+    async revokeShareLink(taskId, token, user) {
+        const task = await this.repository.findById(taskId);
+        if (!task) throw new AppError('Task not found', 404);
+        if (task.user_id !== user.uid) throw new AppError('Forbidden', 403);
+
+        const revoked = await this.sharingRepository.revokeByToken(token, taskId);
+        if (!revoked) throw new AppError('Share link not found for this task', 404);
+
+        return { revoked: true };
     }
 
     async processReminders() {

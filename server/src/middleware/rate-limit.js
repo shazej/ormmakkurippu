@@ -23,3 +23,23 @@ export const authLimiter = rateLimit({
         message: 'Too many login attempts, please try again later.'
     }
 });
+
+/**
+ * Stricter limiter for the public share-link viewer endpoint.
+ * 30 requests per 15 minutes per IP.
+ *
+ * Rationale: this route requires no authentication, so a tighter ceiling
+ * limits token enumeration attempts while remaining permissive for
+ * legitimate external viewers who only make a handful of requests.
+ */
+export const sharePublicLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        status: 'error',
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: 'Too many requests, please try again later.'
+    }
+});

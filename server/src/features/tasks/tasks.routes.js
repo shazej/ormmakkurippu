@@ -16,7 +16,11 @@ router.get('/:id', (req, res) => controller.getTask(req, res));
 router.put('/:id', (req, res) => controller.updateTask(req, res));
 router.patch('/:id', (req, res) => controller.updateTask(req, res));
 router.delete('/:id', (req, res) => controller.deleteTask(req, res));
+// Share link management (owner-only)
 router.post('/:id/share', (req, res) => controller.shareTask(req, res));
+router.get('/:id/shares', (req, res) => controller.listShareLinks(req, res));
+router.delete('/:id/shares/:token', (req, res) => controller.revokeShareLink(req, res));
+
 router.post('/:id/assign', (req, res) => controller.assignTask(req, res));
 
 export default router;
