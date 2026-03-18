@@ -1,4 +1,5 @@
 import { UsersRepository } from './users.repository.js';
+import { sanitizeUser } from '../../utils/sanitize-user.js';
 
 export class UsersService {
     constructor() {
@@ -6,27 +7,28 @@ export class UsersService {
     }
 
     async getProfile(userId) {
-        // ... potentially sanitize or transform
-        return this.repository.findById(userId);
+        const user = await this.repository.findById(userId);
+        return sanitizeUser(user);
     }
 
     async updateProfile(userId, data) {
-        return this.repository.update(userId, data);
+        const user = await this.repository.update(userId, data);
+        return sanitizeUser(user);
     }
 
     async updatePreferences(userId, newPreferences) {
         const user = await this.repository.findById(userId);
         if (!user) throw new Error('User not found');
 
-        // Merge existing preferences with new ones
         const currentPreferences = user.preferences || {};
         const updatedPreferences = {
             ...currentPreferences,
             ...newPreferences
         };
 
-        return this.repository.update(userId, {
+        const updated = await this.repository.update(userId, {
             preferences: updatedPreferences
         });
+        return sanitizeUser(updated);
     }
 }

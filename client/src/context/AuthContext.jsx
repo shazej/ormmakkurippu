@@ -10,42 +10,42 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser]               = useState(null);
-    const [token, setToken]             = useState(() => localStorage.getItem('auth_token'));
+    const [token, setToken]             = useState(null);
     const [loading, setLoading]         = useState(true);
     const [authLoading, setAuthLoading] = useState(false);
     const [authError, setAuthError]     = useState(null);
 
-    // Restore session on mount
+    // Validate stored session on mount
     useEffect(() => {
         const initAuth = async () => {
             const storedToken = localStorage.getItem('auth_token');
-            const storedUser  = localStorage.getItem('auth_user');
-
-            if (storedToken && storedUser) {
-                axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-                try {
-                    // Validate token by fetching fresh user data
-                    const res = await axios.get(`${API}/api/users/me`);
-                    if (res.data.success) {
-                        const freshUser = res.data.data;
-                        setUser(freshUser);
-                        setToken(storedToken);
-                        localStorage.setItem('auth_user', JSON.stringify(freshUser));
-                    } else {
-                        clearAuthState();
-                    }
-                } catch (_) {
-                    // Token is invalid/expired — clear state
-                    clearAuthState();
-                }
+            if (!storedToken) {
+                setLoading(false);
+                return;
             }
-            setLoading(false);
+
+            axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+            try {
+                const res = await axios.get(`${API}/api/users/me`);
+                if (res.data?.success && res.data?.data) {
+                    setUser(res.data.data);
+                    setToken(storedToken);
+                    localStorage.setItem('auth_user', JSON.stringify(res.data.data));
+                } else {
+                    _clearAuthState();
+                }
+            } catch (_) {
+                // 401 / network error — clear stale session
+                _clearAuthState();
+            } finally {
+                setLoading(false);
+            }
         };
 
         initAuth();
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const clearAuthState = () => {
+    const _clearAuthState = () => {
         setToken(null);
         setUser(null);
         delete axios.defaults.headers.common['Authorization'];
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('auth_user');
     };
 
-    const applyAuth = (userData, tokenValue) => {
+    const _applyAuth = (userData, tokenValue) => {
         setToken(tokenValue);
         setUser(userData);
         axios.defaults.headers.common['Authorization'] = `Bearer ${tokenValue}`;
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('auth_user', JSON.stringify(userData));
     };
 
-    // Google OAuth login
+    // Google OAuth login (auth-code flow → server exchange)
     const login = useGoogleLogin({
         flow: 'auth-code',
         scope: 'https://www.googleapis.com/auth/drive.file openid email profile',
@@ -69,11 +69,9 @@ export const AuthProvider = ({ children }) => {
             setAuthLoading(true);
             setAuthError(null);
             try {
-                const { code } = codeResponse;
-                const res = await axios.post(`${API}/api/auth/google`, { code });
-                const { user: userData, tokens } = res.data.data || res.data;
-                const idToken = tokens.id_token;
-                applyAuth(userData, idToken);
+                const res = await axios.post(`${API}/api/auth/google`, { code: codeResponse.code });
+                const { user: userData, tokens } = res.data?.data || res.data;
+                _applyAuth(userData, tokens.id_token);
             } catch (error) {
                 const msg = error.response?.data?.message || 'Google sign-in failed. Please try again.';
                 setAuthError(msg);
@@ -83,9 +81,11 @@ export const AuthProvider = ({ children }) => {
             }
         },
         onError: (err) => {
-            setAuthError('Google sign-in was cancelled or failed.');
+            // popup_closed_by_user is a normal user action — don't show error
+            if (err?.type !== 'popup_closed_by_user') {
+                setAuthError('Google sign-in failed. Please try again.');
+            }
             setAuthLoading(false);
-            console.error('Google Login Error:', err);
         },
     });
 
@@ -95,11 +95,11 @@ export const AuthProvider = ({ children }) => {
         setAuthError(null);
         try {
             const res = await axios.post(`${API}/api/auth/login`, { email, password });
-            const { user: userData, token: jwtToken } = res.data.data || res.data;
-            applyAuth(userData, jwtToken);
+            const { user: userData, token: jwtToken } = res.data?.data || res.data;
+            _applyAuth(userData, jwtToken);
             return { success: true };
         } catch (error) {
-            const msg = error.response?.data?.message || 'Login failed. Please check your credentials.';
+            const msg  = error.response?.data?.message || 'Login failed. Please check your credentials.';
             const code = error.response?.data?.code;
             setAuthError(msg);
             return { success: false, message: msg, code };
@@ -114,11 +114,11 @@ export const AuthProvider = ({ children }) => {
         setAuthError(null);
         try {
             const res = await axios.post(`${API}/api/auth/signup`, { name, email, password, confirmPassword });
-            const { user: userData, token: jwtToken } = res.data.data || res.data;
-            applyAuth(userData, jwtToken);
+            const { user: userData, token: jwtToken } = res.data?.data || res.data;
+            _applyAuth(userData, jwtToken);
             return { success: true };
         } catch (error) {
-            const msg = error.response?.data?.message || 'Signup failed. Please try again.';
+            const msg  = error.response?.data?.message || 'Signup failed. Please try again.';
             const code = error.response?.data?.code;
             setAuthError(msg);
             return { success: false, message: msg, code };
@@ -127,34 +127,33 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Check what auth provider an email uses
+    // Check what auth provider an email uses (for conditional login UI)
     const checkProvider = async (email) => {
         try {
             const res = await axios.get(`${API}/api/auth/check-provider`, { params: { email } });
-            return res.data.data || res.data;
+            return res.data?.data ?? { exists: false, provider: null };
         } catch (_) {
             return { exists: false, provider: null };
         }
     };
 
     const logout = useCallback(async () => {
+        // Always clear client-side state regardless of server response
         try {
-            if (token) {
-                await axios.post(`${API}/api/auth/logout`).catch(() => {});
-            }
+            // Fire-and-forget — server clears session cookie and logs event
+            await axios.post(`${API}/api/auth/logout`).catch(() => {});
         } finally {
             googleLogout();
-            clearAuthState();
+            _clearAuthState();
         }
-    }, [token]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const refreshUser = async () => {
         try {
             const res = await axios.get(`${API}/api/users/me`);
-            if (res.data.success) {
-                const fresh = res.data.data;
-                setUser(fresh);
-                localStorage.setItem('auth_user', JSON.stringify(fresh));
+            if (res.data?.success && res.data?.data) {
+                setUser(res.data.data);
+                localStorage.setItem('auth_user', JSON.stringify(res.data.data));
             }
         } catch (error) {
             console.error('Failed to refresh user', error);

@@ -43,3 +43,20 @@ export const sharePublicLimiter = rateLimit({
         message: 'Too many requests, please try again later.'
     }
 });
+
+/**
+ * Lighter rate limiter for provider-check endpoint.
+ * 20 requests per 15 minutes per IP — permissive for legitimate UX
+ * but prevents bulk email enumeration.
+ */
+export const providerCheckLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        status: 'error',
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: 'Too many requests, please try again later.'
+    }
+});

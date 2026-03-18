@@ -1,5 +1,9 @@
 import { AuthService } from './auth.service.js';
 import { sendSuccess, sendError } from '../../utils/api-response.js';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export class AuthController {
     constructor() {
@@ -11,12 +15,11 @@ export class AuthController {
             const { name, email, password, confirmPassword } = req.body;
             const result = await this.service.signup({ name, email, password, confirmPassword });
 
-            // Set session cookie
             res.cookie('session', result.token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
-                maxAge: 7 * 24 * 3600000 // 7 days
+                maxAge: 7 * 24 * 3600000
             });
 
             sendSuccess(res, result, 'Account created successfully', 201);
@@ -45,13 +48,25 @@ export class AuthController {
 
     async logout(req, res) {
         try {
-            const userId = req.user?.uid;
+            // Try to identify user for audit log without blocking logout on failure
+            let userId = null;
+            try {
+                const authHeader = req.headers.authorization;
+                const cookieToken = req.cookies?.session;
+                const token = (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null) || cookieToken;
+                if (token && process.env.JWT_SECRET) {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                    if (decoded?.uid) userId = decoded.uid;
+                }
+            } catch (_) { /* expired/invalid — still proceed */ }
+
             const result = await this.service.logout(userId);
 
             res.clearCookie('session', {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax'
+                sameSite: 'lax',
+                path: '/'
             });
 
             sendSuccess(res, result, 'Logged out successfully');
@@ -93,16 +108,23 @@ export class AuthController {
     async googleLogin(req, res) {
         try {
             const { code } = req.body;
-            if (!code) throw new Error('Authorization code is required');
+            if (!code) {
+                return res.status(400).json({
+                    success: false,
+                    status: 'error',
+                    message: 'Authorization code is required.',
+                    code: 'VALIDATION_ERROR'
+                });
+            }
 
             const result = await this.service.loginWithGoogle(code);
 
-            if (result.tokens.id_token) {
+            if (result.tokens?.id_token) {
                 res.cookie('session', result.tokens.id_token, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === 'production',
                     sameSite: 'lax',
-                    maxAge: 3600000
+                    maxAge: 3600000 // 1 hour — matches Google token expiry
                 });
             }
 

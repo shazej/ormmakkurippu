@@ -3,6 +3,7 @@ import argon2 from 'argon2';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../../utils/app-error.js';
+import { sanitizeUser } from '../../utils/sanitize-user.js';
 import { logAudit } from '../../admin/audit.js';
 import { google } from 'googleapis';
 import { getOAuthClient } from '../../drive.js';
@@ -13,7 +14,6 @@ const prisma = new PrismaClient();
 const usersRepo = new UsersRepository();
 const workspacesService = new WorkspacesService();
 
-// Password strength: min 8 chars, at least 1 uppercase, 1 lowercase, 1 digit
 const PASSWORD_MIN_LENGTH = 8;
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 const JWT_EXPIRY = '7d';
@@ -35,7 +35,7 @@ function validatePasswordStrength(password) {
 
 function issueJwt(user) {
     const secret = process.env.JWT_SECRET;
-    if (!secret) throw new AppError('JWT_SECRET is not configured.', 500, 'INTERNAL_ERROR');
+    if (!secret) throw new AppError('JWT_SECRET is not configured on the server.', 500, 'INTERNAL_ERROR');
     return jwt.sign(
         { uid: user.id, email: user.primary_email_id, type: 'password' },
         secret,
@@ -43,7 +43,7 @@ function issueJwt(user) {
     );
 }
 
-function deriveProvider(user) {
+export function deriveProvider(user) {
     if (user.google_uid && user.password_hash) return 'BOTH';
     if (user.google_uid) return 'GOOGLE';
     return 'PASSWORD';
@@ -51,12 +51,16 @@ function deriveProvider(user) {
 
 export class AuthService {
     async signup({ name, email, password, confirmPassword }) {
-        if (!name || !email || !password || !confirmPassword) {
+        // Normalize first
+        const normalizedEmail = (email || '').toLowerCase().trim();
+        const trimmedName = (name || '').trim();
+
+        if (!trimmedName || !normalizedEmail || !password || !confirmPassword) {
             throw new AppError('All fields are required.', 400, 'VALIDATION_ERROR');
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!emailRegex.test(normalizedEmail)) {
             throw new AppError('Invalid email address.', 400, 'VALIDATION_ERROR');
         }
 
@@ -66,9 +70,6 @@ export class AuthService {
 
         validatePasswordStrength(password);
 
-        const normalizedEmail = email.toLowerCase().trim();
-
-        // Check if email already exists
         const existingUser = await prisma.user.findUnique({
             where: { primary_email_id: normalizedEmail }
         });
@@ -91,7 +92,7 @@ export class AuthService {
             const newUser = await tx.user.create({
                 data: {
                     primary_email_id: normalizedEmail,
-                    display_name: name.trim(),
+                    display_name: trimmedName,
                     password_hash,
                     role: 'USER',
                     preferences: {},
@@ -105,9 +106,13 @@ export class AuthService {
                 }
             });
 
-            // Link pending task assignments
+            // Link pending task assignments (active tasks only)
             await tx.task.updateMany({
-                where: { assigned_to_email: normalizedEmail, assigned_to_user_id: null },
+                where: {
+                    assigned_to_email: normalizedEmail,
+                    assigned_to_user_id: null,
+                    deleted_at: null
+                },
                 data: { assigned_to_user_id: newUser.id, assigned_to_email: null }
             });
 
@@ -121,10 +126,13 @@ export class AuthService {
         });
 
         await workspacesService.ensureDefaultWorkspace(user.id, normalizedEmail);
-        await logAudit({ uid: user.id, email: normalizedEmail, role: user.role }, 'USER_SIGNUP', 'user', user.id, { method: 'password' });
+        await logAudit(
+            { uid: user.id, email: normalizedEmail, role: user.role },
+            'USER_SIGNUP', 'user', user.id, { method: 'password' }
+        );
 
         const token = issueJwt(user);
-        return { user, token };
+        return { user: sanitizeUser(user), token };
     }
 
     async loginWithPassword({ email, password }) {
@@ -140,7 +148,6 @@ export class AuthService {
         });
 
         if (!user) {
-            // Avoid leaking user existence — generic message
             throw new AppError('Invalid email or password.', 401, 'INVALID_CREDENTIALS');
         }
 
@@ -163,20 +170,24 @@ export class AuthService {
             throw new AppError('Invalid email or password.', 401, 'INVALID_CREDENTIALS');
         }
 
-        await logAudit({ uid: user.id, email: normalizedEmail, role: user.role }, 'USER_LOGIN', 'user', user.id, { method: 'password' });
+        await logAudit(
+            { uid: user.id, email: normalizedEmail, role: user.role },
+            'USER_LOGIN', 'user', user.id, { method: 'password' }
+        );
 
         const token = issueJwt(user);
-        return { user, token };
+        return { user: sanitizeUser(user), token };
     }
 
     async logout(userId) {
-        // For JWT-based auth, token invalidation is client-side (clear storage/cookie).
-        // Optionally record logout in audit log.
         if (userId) {
             try {
                 const user = await prisma.user.findUnique({ where: { id: userId } });
                 if (user) {
-                    await logAudit({ uid: userId, email: user.primary_email_id, role: user.role }, 'USER_LOGOUT', 'user', userId, {});
+                    await logAudit(
+                        { uid: userId, email: user.primary_email_id, role: user.role },
+                        'USER_LOGOUT', 'user', userId, {}
+                    );
                 }
             } catch (_) { /* non-critical */ }
         }
@@ -192,19 +203,16 @@ export class AuthService {
             throw new AppError('Invalid email address.', 400, 'VALIDATION_ERROR');
         }
 
+        const SAFE_RESPONSE = { message: 'If that email exists, a reset link has been sent.' };
+
         const user = await prisma.user.findUnique({ where: { primary_email_id: normalizedEmail } });
 
-        // Always return success to prevent email enumeration
-        if (!user) {
-            return { message: 'If that email exists, a reset link has been sent.' };
-        }
+        // Anti-enumeration: always return same response
+        if (!user) return SAFE_RESPONSE;
 
         const provider = deriveProvider(user);
-        if (provider === 'GOOGLE') {
-            // Return success but with a hint — the email will contain guidance
-            // In a real email we'd tell them to use Google. Here we just return success.
-            return { message: 'If that email exists, a reset link has been sent.' };
-        }
+        // Google-only accounts cannot reset password — return safe response (no hint)
+        if (provider === 'GOOGLE') return SAFE_RESPONSE;
 
         // Generate secure reset token
         const rawToken = crypto.randomBytes(32).toString('hex');
@@ -222,10 +230,14 @@ export class AuthService {
         const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
         const resetLink = `${clientOrigin}/reset-password?token=${rawToken}`;
 
-        // In production: send via email provider (SendGrid, AWS SES, etc.)
-        console.log(`[Auth] Password reset link for ${normalizedEmail}: ${resetLink}`);
+        // TODO: replace with real email provider (SendGrid, AWS SES, Resend, etc.)
+        // For now: dev mode only — link is visible in server logs
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[Auth DEV] Password reset link for ${normalizedEmail}: ${resetLink}`);
+        }
+        // In production this would call: await emailService.sendPasswordReset(normalizedEmail, resetLink);
 
-        return { message: 'If that email exists, a reset link has been sent.' };
+        return SAFE_RESPONSE;
     }
 
     async resetPassword({ token, newPassword, confirmPassword }) {
@@ -254,6 +266,7 @@ export class AuthService {
 
         const password_hash = await argon2.hash(newPassword);
 
+        // Invalidate token immediately and update password atomically
         await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -264,7 +277,10 @@ export class AuthService {
             }
         });
 
-        await logAudit({ uid: user.id, email: user.primary_email_id, role: user.role }, 'PASSWORD_RESET', 'user', user.id, {});
+        await logAudit(
+            { uid: user.id, email: user.primary_email_id, role: user.role },
+            'PASSWORD_RESET', 'user', user.id, {}
+        );
 
         return { message: 'Password reset successfully. You can now sign in.' };
     }
@@ -272,6 +288,10 @@ export class AuthService {
     async checkProvider(email) {
         if (!email) throw new AppError('Email is required.', 400, 'VALIDATION_ERROR');
         const normalizedEmail = email.toLowerCase().trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(normalizedEmail)) {
+            throw new AppError('Invalid email address.', 400, 'VALIDATION_ERROR');
+        }
 
         const user = await prisma.user.findUnique({
             where: { primary_email_id: normalizedEmail }
@@ -295,9 +315,10 @@ export class AuthService {
             const { id: google_uid, email, name, picture, verified_email } = data;
 
             const { user, activatedInvites, activatedTasks } = await prisma.$transaction(async (tx) => {
-                const user = await usersRepo.createOrUpdateGoogleUser({
-                    google_uid, email, name, picture, email_verified: verified_email
-                }, tx);
+                const user = await usersRepo.createOrUpdateGoogleUser(
+                    { google_uid, email, name, picture, email_verified: verified_email },
+                    tx
+                );
 
                 const pendingInvites = await tx.workspaceMember.findMany({
                     where: { email, status: 'PENDING' }
@@ -324,28 +345,29 @@ export class AuthService {
                 return { user, activatedInvites: pendingInvites, activatedTasks: pendingTasks };
             });
 
-            if (activatedInvites.length > 0) {
-                for (const invite of activatedInvites) {
-                    await logAudit(
-                        { uid: user.id, email: user.primary_email_id, role: user.role },
-                        'WORKSPACE_INVITE_ACCEPTED', 'workspace', invite.workspace_id, { memberId: invite.id }
-                    );
-                }
+            for (const invite of activatedInvites) {
+                await logAudit(
+                    { uid: user.id, email: user.primary_email_id, role: user.role },
+                    'WORKSPACE_INVITE_ACCEPTED', 'workspace', invite.workspace_id, { memberId: invite.id }
+                );
             }
 
-            if (activatedTasks && activatedTasks.length > 0) {
-                for (const task of activatedTasks) {
-                    await logAudit(
-                        { uid: user.id, email: user.primary_email_id, role: user.role },
-                        'TASK_ASSIGNMENT_ACTIVATED', 'task', task.id, { previousEmail: email }
-                    );
-                }
+            for (const task of activatedTasks) {
+                await logAudit(
+                    { uid: user.id, email: user.primary_email_id, role: user.role },
+                    'TASK_ASSIGNMENT_ACTIVATED', 'task', task.id, { previousEmail: email }
+                );
             }
 
             await workspacesService.ensureDefaultWorkspace(user.id, email);
 
-            return { user, tokens };
+            // Only return id_token — access_token / refresh_token are server-side concerns
+            return {
+                user: sanitizeUser(user),
+                tokens: { id_token: tokens.id_token }
+            };
         } catch (error) {
+            if (error instanceof AppError) throw error;
             console.error('Google Login Error:', error);
             throw new AppError('Google Authentication Failed', 400, 'AUTH_GOOGLE_FAILED');
         }
@@ -355,9 +377,11 @@ export class AuthService {
         const user = await prisma.user.findUnique({ where: { id: uid } });
         if (!user) throw new AppError('User not found.', 404, 'RESOURCE_NOT_FOUND');
 
-        await logAudit({ uid, email: user.primary_email_id, role: user.role }, 'ACCOUNT_DEACTIVATION', 'user', uid, { reason: 'User requested deactivation' });
+        await logAudit(
+            { uid, email: user.primary_email_id, role: user.role },
+            'ACCOUNT_DEACTIVATION', 'user', uid, { reason: 'User requested deactivation' }
+        );
 
-        // Soft-delete or flag — for now we just record the audit
         return { message: 'Account deactivation requested.' };
     }
 }

@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { UsersRepository } from '../features/users/users.repository.js';
 import { WorkspacesService } from '../features/workspaces/workspaces.service.js';
+import { sanitizeUser } from '../utils/sanitize-user.js';
 
 const prisma = new PrismaClient();
 const googleClient = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID);
@@ -11,8 +12,9 @@ const workspacesService = new WorkspacesService();
 
 /**
  * Middleware to verify both Google ID Tokens and our custom JWTs.
- * Google ID tokens are used by Google OAuth users.
- * Custom JWTs (signed with JWT_SECRET) are used by email/password users.
+ * - Custom JWTs (JWT_SECRET) are issued for email/password users.
+ * - Google ID Tokens are issued by Google for OAuth users.
+ * Keeps the name "verifyFirebaseToken" for backwards compatibility.
  */
 export const verifyFirebaseToken = async (req, res, next) => {
     try {
@@ -21,21 +23,21 @@ export const verifyFirebaseToken = async (req, res, next) => {
 
         if (authHeader && authHeader.startsWith('Bearer ')) {
             token = authHeader.split(' ')[1];
-        } else if (req.cookies && req.cookies.session) {
+        } else if (req.cookies?.session) {
             token = req.cookies.session;
         }
 
         if (!token) {
             return res.status(401).json({
                 success: false,
-                error: 'Unauthorized: No token provided'
+                message: 'Unauthorized: No token provided'
             });
         }
 
         // E2E Bypass for testing
         if (process.env.E2E_TEST_MODE === 'true' && token.startsWith('e2e-magic-token')) {
             const isUser2 = token === 'e2e-magic-token-2';
-            const uid = isUser2 ? 'test-e2e-user-2' : 'test-e2e-user';
+            const uid   = isUser2 ? 'test-e2e-user-2' : 'test-e2e-user';
             const email = isUser2 ? 'colleague@example.com' : 'test@example.com';
 
             let user = await prisma.user.findUnique({ where: { id: uid } });
@@ -46,9 +48,7 @@ export const verifyFirebaseToken = async (req, res, next) => {
                         google_uid: uid,
                         primary_email_id: email,
                         role: 'USER',
-                        emails: {
-                            create: { email, is_primary: true, is_verified: true }
-                        }
+                        emails: { create: { email, is_primary: true, is_verified: true } }
                     }
                 });
                 console.log(`[Auth E2E] Created test user: ${email}`);
@@ -65,53 +65,56 @@ export const verifyFirebaseToken = async (req, res, next) => {
             await ws.acceptPendingInvites(user, email);
 
             req.user = {
-                uid: user.id,
+                uid:        user.id,
                 google_uid: user.google_uid,
-                email: user.primary_email_id,
-                role: user.role,
-                name: isUser2 ? 'Colleague User' : 'Test User',
-                _dbUser: user
+                email:      user.primary_email_id,
+                role:       user.role,
+                name:       isUser2 ? 'Colleague User' : 'Test User',
+                _dbUser:    sanitizeUser(user)
             };
             return next();
         }
 
-        // Try custom JWT first (password-based users)
+        // 1. Try custom JWT (password-based users)
         if (process.env.JWT_SECRET) {
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                if (decoded.type === 'password') {
-                    // Fetch user from DB
+                if (decoded?.type === 'password') {
                     const user = await prisma.user.findUnique({
                         where: { id: decoded.uid },
                         include: { allowed_ips: true, geofence: true }
                     });
 
                     if (!user) {
-                        return res.status(401).json({ success: false, error: 'Unauthorized: User not found' });
+                        return res.status(401).json({
+                            success: false,
+                            message: 'Unauthorized: User not found'
+                        });
                     }
 
                     req.user = {
-                        uid: user.id,
+                        uid:        user.id,
                         google_uid: user.google_uid,
-                        email: user.primary_email_id,
-                        role: user.role,
-                        name: user.display_name,
-                        picture: user.avatar_url,
-                        _dbUser: user
+                        email:      user.primary_email_id,
+                        role:       user.role,
+                        name:       user.display_name,
+                        picture:    user.avatar_url,
+                        _dbUser:    sanitizeUser(user)
                     };
                     return next();
                 }
             } catch (jwtErr) {
-                // Not a valid JWT, try as Google token below
-                if (jwtErr.name !== 'JsonWebTokenError' && jwtErr.name !== 'NotBeforeError') {
-                    if (jwtErr.name === 'TokenExpiredError') {
-                        return res.status(401).json({ success: false, error: 'Unauthorized: Session expired' });
-                    }
+                if (jwtErr.name === 'TokenExpiredError') {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Unauthorized: Session expired. Please sign in again.'
+                    });
                 }
+                // JsonWebTokenError = not our JWT format → fall through to Google
             }
         }
 
-        // Try Google ID Token verification
+        // 2. Try Google ID Token
         const ticket = await googleClient.verifyIdToken({
             idToken: token,
             audience: process.env.GOOGLE_CLIENT_ID,
@@ -131,13 +134,13 @@ export const verifyFirebaseToken = async (req, res, next) => {
         await workspacesService.acceptPendingInvites(user, email);
 
         req.user = {
-            uid: user.id,
+            uid:        user.id,
             google_uid: user.google_uid,
-            email: user.primary_email_id,
-            role: user.role,
+            email:      user.primary_email_id,
+            role:       user.role,
             name,
             picture,
-            _dbUser: user
+            _dbUser:    sanitizeUser(user)
         };
 
         next();
@@ -145,7 +148,7 @@ export const verifyFirebaseToken = async (req, res, next) => {
         console.error('Auth Verification Error:', error.message);
         return res.status(401).json({
             success: false,
-            error: 'Unauthorized: Invalid token'
+            message: 'Unauthorized: Invalid or expired token'
         });
     }
 };
