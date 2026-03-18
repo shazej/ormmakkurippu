@@ -35,6 +35,8 @@ model User {
   display_name        String?
   avatar_url          String?
   default_workspace_id String?
+  password_reset_token_hash String?
+  password_reset_expires_at DateTime?
 
   emails              UserEmail[]
   mfa_methods         MfaMethod[]

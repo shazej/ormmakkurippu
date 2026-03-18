@@ -3,19 +3,29 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import MarketingLayout from './layouts/MarketingLayout';
 import AppLayout from './layouts/AppLayout';
 import LandingPage from './pages/LandingPage';
-import HomePage from './pages/HomePage'; // This is "Inbox" now
+import HomePage from './pages/HomePage';
 import CallsPage from './pages/CallsPage';
 import AssignedToMePage from './pages/AssignedToMePage';
 import TaskDetailsPage from './pages/TaskDetailsPage';
 import OnboardingWizard from './pages/onboarding/OnboardingWizard';
-
 import WelcomeStep from './pages/onboarding/WelcomeStep';
-
 import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import SharedTaskPage from './pages/SharedTaskPage';
+import AuthLoadingScreen from './pages/AuthLoadingScreen';
 import { useLocation } from 'react-router-dom';
 
-// Protected Route Wrapper
+// Redirects authenticated users away from guest-only pages
+function GuestOnlyRoute({ children }) {
+    const { user, loading } = useAuth();
+    if (loading) return <AuthLoadingScreen />;
+    if (user) return <Navigate to={user.is_onboarded ? '/app' : '/onboarding'} replace />;
+    return children;
+}
+
+// Redirects unauthenticated users to login
 function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
     const location = useLocation();
@@ -25,15 +35,14 @@ function ProtectedRoute({ children }) {
             <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
         </div>
     );
-    if (!user) return <Navigate to="/login" replace />;
+    if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
 
     // Enforce onboarding
-    // Allow access to /app/onboard/welcome even if not onboarded
     if (!user.is_onboarded && !location.pathname.startsWith('/onboarding') && location.pathname !== '/app/onboard/welcome') {
         return <Navigate to="/onboarding" replace />;
     }
 
-    // Redirect to app if already onboarded and trying to access onboarding (except welcome step)
+    // Redirect already-onboarded users away from onboarding
     if (user.is_onboarded && location.pathname.startsWith('/onboarding')) {
         return <Navigate to="/app" replace />;
     }
@@ -44,23 +53,28 @@ function ProtectedRoute({ children }) {
 function AppRoutes() {
     return (
         <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
+            {/* Guest-only auth routes */}
+            <Route path="/login" element={<GuestOnlyRoute><LoginPage /></GuestOnlyRoute>} />
+            <Route path="/signup" element={<GuestOnlyRoute><SignupPage /></GuestOnlyRoute>} />
+            <Route path="/forgot-password" element={<GuestOnlyRoute><ForgotPasswordPage /></GuestOnlyRoute>} />
+            {/* Reset password — allow regardless of auth state (token link from email) */}
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+
             {/* Public shared-task viewer — no auth required */}
             <Route path="/shared/task/:token" element={<SharedTaskPage />} />
 
             <Route element={<MarketingLayout />}>
                 <Route path="/" element={<LandingPage />} />
-                {/* <Route path="/about" element={<AboutPage />} /> */}
             </Route>
 
-            {/* App Routes (Protected) */}
+            {/* Protected: Onboarding */}
             <Route path="/onboarding" element={
                 <ProtectedRoute>
                     <OnboardingWizard />
                 </ProtectedRoute>
             } />
 
+            {/* Protected: App */}
             <Route path="/app" element={
                 <ProtectedRoute>
                     <AppLayout />
