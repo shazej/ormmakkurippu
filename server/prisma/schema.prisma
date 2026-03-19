@@ -261,22 +261,25 @@ model Task {
 }
 
 model Contact {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   owner_user_id String
   name          String?
-  phone_e164    String   // E.164 format +1234567890
+  phone_e164    String    // E.164 format +1234567890
   email         String?
   company       String?
-  tags          String[] @default([])
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  tags          String[]  @default([])
+  notes         String?   // Free-text notes
+  deleted_at    DateTime? // Soft delete
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
 
-  owner         User     @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+  owner         User      @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
   call_logs     CallLog[]
   tasks         Task[]
 
   @@unique([owner_user_id, phone_e164])
   @@index([owner_user_id])
+  @@index([email])
   @@map("contacts")
 }
 

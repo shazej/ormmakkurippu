@@ -7,6 +7,8 @@ import HomePage from './pages/HomePage'; // This is "Inbox" now
 import CallsPage from './pages/CallsPage';
 import AssignedToMePage from './pages/AssignedToMePage';
 import TaskDetailsPage from './pages/TaskDetailsPage';
+import ContactsPage from './pages/ContactsPage';
+import ContactDetailPage from './pages/ContactDetailPage';
 import OnboardingWizard from './pages/onboarding/OnboardingWizard';
 
 import WelcomeStep from './pages/onboarding/WelcomeStep';
@@ -74,6 +76,8 @@ function AppRoutes() {
                 <Route path="calls" element={<CallsPage />} />
                 <Route path="assigned" element={<AssignedToMePage />} />
                 <Route path="tasks/:id" element={<TaskDetailsPage />} />
+                <Route path="contacts" element={<ContactsPage />} />
+                <Route path="contacts/:id" element={<ContactDetailPage />} />
                 <Route path="onboard/welcome" element={<WelcomeStep />} />
             </Route>
 

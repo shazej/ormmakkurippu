@@ -2,8 +2,11 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export class ContactsRepository {
-    async find(userId, filters = {}, pagination = {}) {
-        const where = { owner_user_id: userId };
+    async find(userId, filters = {}) {
+        const where = {
+            owner_user_id: userId,
+            deleted_at: null
+        };
         if (filters.search) {
             where.OR = [
                 { name: { contains: filters.search, mode: 'insensitive' } },
@@ -12,19 +15,45 @@ export class ContactsRepository {
             ];
         }
 
-        const contacts = await prisma.contact.findMany({
+        return prisma.contact.findMany({
             where,
             orderBy: { created_at: 'desc' },
-            take: pagination.limit ? Number(pagination.limit) : undefined,
-            skip: pagination.offset ? Number(pagination.offset) : undefined
+            include: {
+                _count: { select: { call_logs: true, tasks: { where: { deleted_at: null } } } }
+            }
         });
-        return contacts;
     }
 
+    // Returns non-deleted contact only — safe default for all ownership/edit checks
     async findById(id) {
+        return prisma.contact.findFirst({
+            where: { id, deleted_at: null }
+        });
+    }
+
+    // Internal: returns contact regardless of deleted_at (used for phone uniqueness edge cases)
+    async findByIdIncludeDeleted(id) {
         return prisma.contact.findUnique({ where: { id } });
     }
 
+    async findWithHistory(id, userId) {
+        return prisma.contact.findFirst({
+            where: { id, owner_user_id: userId, deleted_at: null },
+            include: {
+                call_logs: {
+                    orderBy: { call_time: 'desc' },
+                    take: 50
+                },
+                tasks: {
+                    where: { deleted_at: null },
+                    orderBy: { created_at: 'desc' },
+                    take: 50
+                }
+            }
+        });
+    }
+
+    // Returns contact even if soft-deleted (needed to check phone uniqueness against DB constraint)
     async findByPhone(userId, phone) {
         return prisma.contact.findUnique({
             where: {
@@ -32,6 +61,16 @@ export class ContactsRepository {
                     owner_user_id: userId,
                     phone_e164: phone
                 }
+            }
+        });
+    }
+
+    async findByEmail(userId, email) {
+        return prisma.contact.findFirst({
+            where: {
+                owner_user_id: userId,
+                email: { equals: email, mode: 'insensitive' },
+                deleted_at: null
             }
         });
     }
@@ -44,7 +83,27 @@ export class ContactsRepository {
         return prisma.contact.update({ where: { id }, data });
     }
 
-    async delete(id) {
+    async softDelete(id) {
+        return prisma.contact.update({
+            where: { id },
+            data: { deleted_at: new Date() }
+        });
+    }
+
+    // Hard delete — used to free DB unique slots occupied by soft-deleted contacts
+    async hardDelete(id) {
         return prisma.contact.delete({ where: { id } });
+    }
+
+    // Retroactively link unlinked call logs to a contact by phone
+    async relinkCallsByPhone(userId, phone, contactId) {
+        return prisma.callLog.updateMany({
+            where: {
+                owner_user_id: userId,
+                caller_phone_e164: phone,
+                contact_id: null
+            },
+            data: { contact_id: contactId }
+        });
     }
 }
