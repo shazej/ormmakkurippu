@@ -54,9 +54,11 @@ export default function AppLayout() {
             setLoading(true);
             const params = query ? { search: query } : {};
             const response = await axios.get('/api/tasks', { params });
-            setTasks(response.data);
+            // API returns { success: true, data: [...] }
+            setTasks(response.data?.data || response.data || []);
         } catch (err) {
             console.error('Error fetching tasks:', err);
+            setTasks([]);
         } finally {
             setLoading(false);
         }

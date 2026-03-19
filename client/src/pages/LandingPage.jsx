@@ -113,7 +113,7 @@ function FaqItem({ q, a }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function LandingPage() {
-    const { user, login } = useAuth();
+    const { user } = useAuth();
 
     useEffect(() => {
         document.title = 'Ormmakkurippu — Turn every call into a tracked task';
@@ -167,12 +167,12 @@ export default function LandingPage() {
                                     </Link>
                                 ) : (
                                     <>
-                                        <button
-                                            onClick={handleCta}
-                                            className="bg-red-600 text-white px-8 py-4 rounded-xl text-base font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                        <Link
+                                            to="/login"
+                                            className="bg-red-600 text-white px-8 py-4 rounded-xl text-base font-bold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-center"
                                         >
                                             Start for free
-                                        </button>
+                                        </Link>
                                         <Link
                                             to="/login"
                                             className="border border-gray-200 text-gray-700 px-8 py-4 rounded-xl text-base font-semibold hover:border-gray-400 hover:text-gray-900 transition-all text-center"
@@ -470,12 +470,12 @@ export default function LandingPage() {
                         </Link>
                     ) : (
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <button
-                                onClick={handleCta}
-                                className="bg-red-600 text-white px-10 py-4 rounded-xl text-base font-bold hover:bg-red-500 transition-colors"
+                            <Link
+                                to="/login"
+                                className="bg-red-600 text-white px-10 py-4 rounded-xl text-base font-bold hover:bg-red-500 transition-colors text-center"
                             >
                                 Start for free
-                            </button>
+                            </Link>
                             <Link
                                 to="/login"
                                 className="border border-gray-700 text-gray-300 px-10 py-4 rounded-xl text-base font-semibold hover:border-gray-400 hover:text-white transition-colors"

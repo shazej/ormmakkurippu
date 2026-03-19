@@ -3,24 +3,29 @@ import { TasksService } from './tasks.service.js';
 import { AppError } from '../../utils/app-error.js';
 
 // Mock Dependencies
-vi.mock('./tasks.repository.js', () => ({
-    TasksRepository: class {
-        constructor() {
-            this.findById = vi.fn();
-            this.update = vi.fn();
-            this.find = vi.fn();
-            this.create = vi.fn();
-        }
-    }
-}));
+vi.mock('./tasks.repository.js', () => {
+    return {
+        TasksRepository: vi.fn().mockImplementation(function () {
+            return {
+                findById: vi.fn(),
+                update: vi.fn(),
+                find: vi.fn(),
+                create: vi.fn(),
+                softDelete: vi.fn()
+            };
+        })
+    };
+});
 
-vi.mock('../users/users.repository.js', () => ({
-    UsersRepository: class {
-        constructor() {
-            this.findByEmail = vi.fn();
-        }
-    }
-}));
+vi.mock('../users/users.repository.js', () => {
+    return {
+        UsersRepository: vi.fn().mockImplementation(function () {
+            return {
+                findByEmail: vi.fn()
+            };
+        })
+    };
+});
 
 describe('TasksService.updateTask', () => {
     let service;
@@ -70,7 +75,7 @@ describe('TasksService.updateTask', () => {
         const result = await service.updateTask('task-1', user, { title: 'Hacked Title' });
 
         expect(mockRepo.update).not.toHaveBeenCalled();
-        expect(result).toEqual(task); // Returns masked copy, so toEqual is better than toBe (reference check failing)
+        expect(result).toEqual(task); // Returns masked copy or original task content
     });
 
     it('should allow Assignee to update notes', async () => {

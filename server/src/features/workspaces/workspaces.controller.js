@@ -14,7 +14,7 @@ export class WorkspacesController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 
     createWorkspace = async (req, res) => {
         try {
@@ -29,7 +29,7 @@ export class WorkspacesController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 
     inviteMember = async (req, res) => {
         try {
@@ -45,7 +45,7 @@ export class WorkspacesController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 
     getCurrentWorkspace = async (req, res) => {
         try {
@@ -57,5 +57,36 @@ export class WorkspacesController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
+
+    updateCurrentWorkspace = async (req, res) => {
+        try {
+            const schema = z.object({
+                name: z.string().min(1)
+            });
+            const result = schema.safeParse(req.body);
+            if (!result.success) return sendError(res, result.error.errors, 400);
+
+            const currentWorkspace = await this.service.getCurrentWorkspace(req.user);
+            if (!currentWorkspace) return sendError(res, 'No active workspace found', 404);
+
+            const updated = await this.service.updateWorkspace(req.user, currentWorkspace.id, result.data);
+            sendSuccess(res, updated, 'Workspace renamed');
+        } catch (error) {
+            sendError(res, error.message, error.status || 500);
+        }
+    };
+
+    removeMember = async (req, res) => {
+        try {
+            const { userId } = req.params;
+            const currentWorkspace = await this.service.getCurrentWorkspace(req.user);
+            if (!currentWorkspace) return sendError(res, 'No active workspace found', 404);
+
+            await this.service.removeMember(req.user, currentWorkspace.id, userId);
+            sendSuccess(res, null, 'Member removed');
+        } catch (error) {
+            sendError(res, error.message, error.status || 500);
+        }
+    };
 }

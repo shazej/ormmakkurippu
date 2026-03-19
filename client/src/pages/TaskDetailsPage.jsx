@@ -18,7 +18,7 @@ function TaskDetailsPage() {
     const fetchTask = async () => {
         try {
             const response = await axios.get(`/api/tasks/${id}`);
-            setTask(response.data);
+            setTask(response.data?.data || response.data);
             setLoading(false);
         } catch (err) {
             console.error('Error fetching task:', err);

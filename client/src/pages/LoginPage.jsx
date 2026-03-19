@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthLoadingScreen from './AuthLoadingScreen';
@@ -10,9 +10,18 @@ const BENEFITS = [
     { icon: '⚡', text: 'Real-time updates for everyone' },
 ];
 
+const DEMO_ACCOUNTS = [
+    { email: 'owner@demo.local', label: 'Demo Owner', description: 'Full admin access — create workspaces, invite members, manage tasks', icon: '👑' },
+    { email: 'member@demo.local', label: 'Demo Member', description: 'Standard access — assigned tasks, team collaboration', icon: '👤' },
+    { email: 'demo@local.test', label: 'Demo User', description: 'Standard seeded account (Demo123!) — verification ready', icon: '🚀' },
+];
+
+const IS_DEMO = import.meta.env.VITE_DEMO_AUTH === 'true';
+
 export default function LoginPage() {
-    const { login, user, loading, authLoading } = useAuth();
+    const { login, demoLogin, user, loading, authLoading } = useAuth();
     const navigate = useNavigate();
+    const [demoLoginLoading, setDemoLoginLoading] = useState(null); // email of the account being logged in for demo
 
     // If already authenticated, bounce to the app
     useEffect(() => {
@@ -25,8 +34,67 @@ export default function LoginPage() {
         document.title = 'Sign in — Ormmakkurippu';
     }, []);
 
+
+    const handleDemoLogin = async (email) => {
+        setDemoLoginLoading(email);
+        try {
+            await demoLogin(email);
+        } finally {
+            setDemoLoginLoading(null);
+        }
+    };
+
     if (loading || authLoading) return <AuthLoadingScreen />;
 
+    if (IS_DEMO) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-900" style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' }}>
+                <div className="max-w-md w-full px-4">
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <div className="text-5xl mb-2">🧪</div>
+                        <h1 className="text-white text-3xl font-bold">DEMO Mode</h1>
+                        <p className="text-gray-400 mt-2 text-sm">
+                            Pick a demo account to sign in instantly — no password required.
+                        </p>
+                        <div className="inline-block bg-yellow-400/20 border border-yellow-400/40 rounded-lg px-4 py-1.5 text-xs text-yellow-500 mt-4">
+                            ⚠️ Not for production use
+                        </div>
+                    </div>
+
+                    {/* Account cards */}
+                    <div className="flex flex-col gap-4">
+                        {DEMO_ACCOUNTS.map(({ email, label, description, icon }) => (
+                            <button
+                                key={email}
+                                onClick={() => handleDemoLogin(email)}
+                                disabled={!!demoLoginLoading}
+                                className={`bg-white/10 border border-white/10 rounded-2xl p-5 text-left transition-all backdrop-blur-md flex items-center gap-4 hover:bg-white/20 ${
+                                    demoLoginLoading && demoLoginLoading !== email ? 'opacity-50' : 'opacity-100'
+                                } ${demoLoginLoading === email ? 'bg-indigo-600/50' : ''}`}
+                            >
+                                <span className="text-3xl">{icon}</span>
+                                <div className="flex-1">
+                                    <div className="text-white font-semibold text-base">{label}</div>
+                                    <div className="text-gray-400 text-xs mt-1">{description}</div>
+                                    <div className="text-indigo-400 text-[10px] mt-1 font-mono">{email}</div>
+                                </div>
+                                <div className="text-white/30 text-xl font-bold">
+                                    {demoLoginLoading === email ? '⏳' : '→'}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <p className="text-center text-gray-600 text-[10px] mt-8">
+                        DEMO_AUTH=true · Ormmakkurippu Dev Build
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Production: Google-only login ────────────────────────────────────────
     return (
         <div className="min-h-screen flex bg-white">
 
@@ -78,7 +146,7 @@ export default function LoginPage() {
                         </Link>
                     </div>
 
-                    <div className="mb-8">
+                    <div className="mb-8 text-center sm:text-left">
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h1>
                         <p className="text-gray-500 text-sm">Sign in to your workspace</p>
                     </div>
@@ -104,14 +172,14 @@ export default function LoginPage() {
                             <div className="w-full border-t border-gray-200" />
                         </div>
                         <div className="relative flex justify-center">
-                            <span className="bg-white px-3 text-xs text-gray-400 lg:bg-white" style={{ backgroundColor: 'inherit' }}>
+                            <span className="bg-white px-3 text-xs text-gray-400">
                                 Secure · Private · Fast
                             </span>
                         </div>
                     </div>
 
                     {/* Trust line */}
-                    <p className="text-center text-xs text-gray-400 leading-relaxed">
+                    <p className="text-center text-[11px] text-gray-400 leading-relaxed px-4">
                         By continuing, you agree to our{' '}
                         <Link to="#" className="text-gray-600 underline hover:text-gray-900">Terms of Service</Link>
                         {' '}and{' '}

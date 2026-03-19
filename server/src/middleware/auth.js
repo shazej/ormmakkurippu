@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import { PrismaClient } from '@prisma/client';
 import { UsersRepository } from '../features/users/users.repository.js';
 import { WorkspacesService } from '../features/workspaces/workspaces.service.js';
+import { verifyDemoToken, findDemoUserById } from '../features/auth/demo-auth.service.js';
 
 const prisma = new PrismaClient();
 const client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID);
@@ -31,11 +32,33 @@ export const verifyFirebaseToken = async (req, res, next) => {
             });
         }
 
-        // E2E Bypass for testing
-        if (process.env.E2E_TEST_MODE === 'true' && token.startsWith('e2e-magic-token')) {
+        // ── DEMO Auth bypass (DEMO_AUTH=true, non-production only) ───────────────────────────
+        if (process.env.DEMO_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+            const demoPayload = verifyDemoToken(token);
+            if (demoPayload) {
+                // Look up (or lazy-create) the demo user from DB (supports LocalDb + Prisma)
+                let user = await findDemoUserById(demoPayload.user_id);
+                if (!user) {
+                    const { upsertDemoUser } = await import('../features/auth/demo-auth.service.js');
+                    user = await upsertDemoUser(demoPayload.email);
+                }
+                req.user = {
+                    uid: user.id,
+                    email: user.primary_email_id,
+                    role: user.role,
+                    name: user.display_name,
+                    _dbUser: user,
+                };
+                return next();
+            }
+        }
+
+        // E2E Bypass for testing (non-production only)
+        if (process.env.E2E_TEST_MODE === 'true' && process.env.NODE_ENV !== 'production' && token.startsWith('e2e-magic-token')) {
             const isUser2 = token === 'e2e-magic-token-2';
             const uid = isUser2 ? 'test-e2e-user-2' : 'test-e2e-user';
             const email = isUser2 ? 'colleague@example.com' : 'test@example.com';
+
 
             // Upsert Test User to satisfy Foreign Keys
             let user = await prisma.user.findUnique({ where: { id: uid } });

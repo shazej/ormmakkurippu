@@ -15,7 +15,7 @@ export class ContactsController {
         } catch (error) {
             sendError(res, error);
         }
-    }
+    };
 
     createContact = async (req, res) => {
         try {
@@ -44,5 +44,5 @@ export class ContactsController {
             }
             sendError(res, error);
         }
-    }
+    };
 }

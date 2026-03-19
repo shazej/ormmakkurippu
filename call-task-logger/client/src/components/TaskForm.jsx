@@ -14,6 +14,8 @@ const formSchema = z.object({
     description: z.string().trim().min(1, 'Description is required'),
     notes: z.string().trim().optional(),
     status: z.enum(['New', 'In Progress', 'Done']),
+    recurrenceRule: z.enum(['daily', 'weekly', 'monthly']).nullable().optional(),
+    projectId: z.string().optional().nullable(),
 });
 
 export function TaskForm({ initialData, onSubmit, onCancel, isCallLogMode }) {
@@ -25,6 +27,8 @@ export function TaskForm({ initialData, onSubmit, onCancel, isCallLogMode }) {
         description: initialData?.description || '',
         notes: initialData?.notes || '',
         status: initialData?.status || 'New',
+        recurrenceRule: initialData?.recurrenceRule || null,
+        projectId: initialData?.projectId || '',
     });
 
     const [errors, setErrors] = useState({});
@@ -93,6 +97,8 @@ export function TaskForm({ initialData, onSubmit, onCancel, isCallLogMode }) {
                     description: '',
                     notes: '',
                     status: 'New',
+                    recurrenceRule: null,
+                    projectId: '',
                 });
                 // Clear message after 2 seconds
                 setTimeout(() => setSavedMessage(null), 2000);
@@ -176,6 +182,24 @@ export function TaskForm({ initialData, onSubmit, onCancel, isCallLogMode }) {
                 <option value="In Progress">In Progress</option>
                 <option value="Done">Done</option>
             </Select>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                    label="Recurrence"
+                    name="recurrenceRule"
+                    value={formData.recurrenceRule || ''}
+                    onChange={handleChange}
+                    error={errors.recurrenceRule}
+                >
+                    <option value="">None</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </Select>
+
+                {/* Project Selection would go here if we had the list of projects */}
+                {/* For now, I'll just add the field if we have projects, but since it's simple recurrence request, let's stick to recurrence */}
+            </div>
 
             <Textarea
                 label="Description *"

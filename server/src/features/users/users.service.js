@@ -6,27 +6,36 @@ export class UsersService {
     }
 
     async getProfile(userId) {
-        // ... potentially sanitize or transform
-        return this.repository.findById(userId);
+        const user = await this.repository.findById(userId);
+        if (!user) return null;
+
+        // Sanitize: Remove sensitive fields before returning to client
+        const { password_hash, verification_token_hash, ...sanitizedUser } = user;
+        return sanitizedUser;
     }
 
     async updateProfile(userId, data) {
-        return this.repository.update(userId, data);
+        const user = await this.repository.update(userId, data);
+        const { password_hash, verification_token_hash, ...sanitizedUser } = user;
+        return sanitizedUser;
     }
 
     async updatePreferences(userId, newPreferences) {
-        const user = await this.repository.findById(userId);
-        if (!user) throw new Error('User not found');
+        const existingUser = await this.repository.findById(userId);
+        if (!existingUser) throw new Error('User not found');
 
         // Merge existing preferences with new ones
-        const currentPreferences = user.preferences || {};
+        const currentPreferences = existingUser.preferences || {};
         const updatedPreferences = {
             ...currentPreferences,
             ...newPreferences
         };
 
-        return this.repository.update(userId, {
+        const updatedUser = await this.repository.update(userId, {
             preferences: updatedPreferences
         });
+
+        const { password_hash, verification_token_hash, ...sanitizedUser } = updatedUser;
+        return sanitizedUser;
     }
 }

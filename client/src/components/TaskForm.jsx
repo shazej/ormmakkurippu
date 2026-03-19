@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import AttachmentUpload from './AttachmentUpload';
 import { useAuth } from '../context/AuthContext';
 
 function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = null }) {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
+    const [localError, setLocalError] = useState(null);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -14,14 +16,37 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
         status: 'Pending',
         notes: '',
         assignedToEmail: '',
-        attachments: []
+        attachments: [],
+        recurrenceRule: null,
+        projectId: null
     });
+
+    const [projects, setProjects] = useState([]);
 
     useEffect(() => {
         if (initialData) {
-            setFormData(prev => ({ ...prev, ...initialData }));
+            setFormData(prev => ({
+                ...prev,
+                ...initialData,
+                projectId: initialData.project_id || initialData.projectId || null,
+                recurrenceRule: initialData.recurrence_rule || initialData.recurrenceRule || null
+            }));
         }
     }, [initialData]);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            if (!user?.default_workspace_id) return;
+            try {
+                const res = await axios.get(`/api/projects?workspaceId=${user.default_workspace_id}`);
+                const list = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+                setProjects(list);
+            } catch (err) {
+                console.error("Failed to fetch projects", err);
+            }
+        };
+        fetchProjects();
+    }, [user?.default_workspace_id]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -48,12 +73,18 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setLocalError(null);
+        const hasContent = formData.title?.trim() || formData.fromName?.trim() || formData.description?.trim();
+        if (!hasContent) {
+            setLocalError('Task title is required. Please enter a title, caller name, or description.');
+            return;
+        }
         onSubmit(formData);
     };
 
     return (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 space-y-4">
-            {error && (
+            {(error || localError) && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
                     <div className="flex">
                         <div className="flex-shrink-0">
@@ -62,7 +93,7 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
                             </svg>
                         </div>
                         <div className="ml-3">
-                            <p className="text-sm text-red-700 whitespace-pre-wrap">{error}</p>
+                            <p className="text-sm text-red-700 whitespace-pre-wrap">{error || localError}</p>
                         </div>
                     </div>
                 </div>
@@ -114,8 +145,7 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
                 />
                 <p className="text-xs text-gray-500 mt-1">Leave empty to keep unassigned.</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                     <select
@@ -143,6 +173,9 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
                         <option value="High">High</option>
                     </select>
                 </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
@@ -157,6 +190,35 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
                         <option value="Cancelled">Cancelled</option>
                     </select>
                 </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                    <select
+                        name="projectId"
+                        value={formData.projectId || ''}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">No Project</option>
+                        {projects.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Recurrence</label>
+                <select
+                    name="recurrenceRule"
+                    value={formData.recurrenceRule || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="">None</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
             </div>
 
             <div>
@@ -219,7 +281,7 @@ function TaskForm({ initialData = {}, onSubmit, buttonText = "Save", error = nul
             >
                 {buttonText}
             </button>
-        </form>
+        </form >
     );
 }
 

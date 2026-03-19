@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2, Calendar, User, Phone, Tag, AlertCircle, RotateCcw } from 'lucide-react';
+import { Pencil, Trash2, Calendar, User, Phone, Tag, AlertCircle, RotateCcw, MessageSquare } from 'lucide-react';
 import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
 
@@ -29,7 +29,7 @@ function PriorityBadge({ priority }) {
     );
 }
 
-export function TaskList({ tasks, isLoading, error, onEdit, onDelete, onRestore }) {
+export function TaskList({ tasks, isLoading, error, onEdit, onDelete, onRestore, onViewDetail }) {
     if (isLoading) {
         return (
             <div className="flex justify-center items-center py-20">
@@ -109,9 +109,14 @@ export function TaskList({ tasks, isLoading, error, onEdit, onDelete, onRestore 
                                 <RotateCcw className="h-4 w-4 mr-1" /> Restore
                             </Button>
                         ) : (
-                            <Button variant="outline" size="sm" onClick={() => onEdit(task)}>
-                                <Pencil className="h-4 w-4 mr-1" /> Edit
-                            </Button>
+                            <>
+                                <Button variant="outline" size="sm" onClick={() => onViewDetail(task)} className="mr-auto text-blue-600 border-blue-200 hover:bg-blue-50">
+                                    <MessageSquare className="h-4 w-4 mr-1" /> Comments
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => onEdit(task)}>
+                                    <Pencil className="h-4 w-4 mr-1" /> Edit
+                                </Button>
+                            </>
                         )}
                         <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => onDelete(task.id)}>
                             <Trash2 className="h-4 w-4 mr-1" /> {onRestore ? "Delete Forever" : "Delete"}

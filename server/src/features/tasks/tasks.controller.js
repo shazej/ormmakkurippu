@@ -26,7 +26,31 @@ export class TasksController {
             if (next) next(error);
             else sendError(res, error);
         }
-    }
+    };
+
+    getTodayTasks = async (req, res, next) => {
+        try {
+            const { timezone } = req.query;
+            const tasks = await this.service.getTodayTasks(req.user, timezone);
+            sendSuccess(res, tasks);
+        } catch (error) {
+            console.error('[TasksController] getTodayTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    };
+
+    getUpcomingTasks = async (req, res, next) => {
+        try {
+            const { days, timezone } = req.query;
+            const tasks = await this.service.getUpcomingTasks(req.user, days, timezone);
+            sendSuccess(res, tasks);
+        } catch (error) {
+            console.error('[TasksController] getUpcomingTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    };
 
     getAssignedTasks = async (req, res, next) => {
         try {
@@ -43,7 +67,7 @@ export class TasksController {
             if (next) next(error);
             else sendError(res, error);
         }
-    }
+    };
 
     getTask = async (req, res, next) => {
         try {
@@ -55,7 +79,7 @@ export class TasksController {
             if (next) next(error);
             else sendError(res, error);
         }
-    }
+    };
 
     createTask = async (req, res, next) => {
         try {
@@ -74,7 +98,10 @@ export class TasksController {
                 notes: z.string().optional(),
                 reminderAt: z.string().datetime().nullable().optional(),
                 dueDate: z.string().datetime().nullable().optional(),
-                assignedToEmail: z.string().email().optional().or(z.literal(''))
+                assignedToEmail: z.string().email().optional().or(z.literal('')),
+                recurrenceRule: z.enum(['daily', 'weekly', 'monthly']).nullable().optional(),
+                recurrenceAnchorDate: z.string().datetime().nullable().optional(),
+                projectId: z.string().uuid().nullable().optional()
             });
 
             const result = schema.safeParse(req.body);
@@ -107,7 +134,7 @@ export class TasksController {
                 res.status(500).json({ success: false, error: error.message });
             }
         }
-    }
+    };
 
     updateTask = async (req, res, next) => {
         try {
@@ -120,7 +147,11 @@ export class TasksController {
                 assignedToEmail: z.string().email().optional().or(z.literal('')),
                 dueDate: z.string().datetime().nullable().optional(),
                 notes: z.string().optional(),
-                reminderAt: z.string().datetime().nullable().optional()
+                due_date: z.string().datetime().nullable().optional(),
+                reminderAt: z.string().datetime().nullable().optional(),
+                recurrenceRule: z.enum(['daily', 'weekly', 'monthly']).nullable().optional(),
+                recurrenceAnchorDate: z.string().datetime().nullable().optional(),
+                projectId: z.string().uuid().nullable().optional()
             });
 
             const result = schema.safeParse(req.body);
@@ -134,7 +165,7 @@ export class TasksController {
             if (next) next(error);
             else sendError(res, error);
         }
-    }
+    };
 
     deleteTask = async (req, res, next) => {
         try {
@@ -145,12 +176,11 @@ export class TasksController {
             if (next) next(error);
             else sendError(res, error);
         }
-    }
+    };
 
     assignTask = async (req, res, next) => {
         try {
             const { email } = req.body;
-            // Validate email if present
             if (email && !z.string().email().safeParse(email).success) {
                 return sendError(res, 'Invalid email format', 400);
             }
@@ -162,7 +192,7 @@ export class TasksController {
             if (next) next(error);
             else sendError(res, error);
         }
-    }
+    };
 
     // ── Share link management (owner-only, authenticated) ──────────────────
 
@@ -210,4 +240,52 @@ export class TasksController {
             sendError(res, error);
         }
     }
+
+    bulkTasks = async (req, res, next) => {
+        try {
+            const schema = z.object({
+                action: z.enum(['complete', 'reopen', 'delete', 'assign']),
+                taskIds: z.array(z.string()),
+                email: z.string().email().optional()
+            });
+
+            const result = schema.safeParse(req.body);
+            if (!result.success) return sendError(res, result.error.errors, 400);
+
+            const summary = await this.service.bulkTasks(req.user, result.data);
+            sendSuccess(res, summary);
+        } catch (error) {
+            console.error('[TasksController] bulkTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    };
+
+    exportTasks = async (req, res, next) => {
+        try {
+            const csv = await this.service.exportTasksCsv(req.user);
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', 'attachment; filename="tasks-export.csv"');
+            res.status(200).send(csv);
+        } catch (error) {
+            console.error('[TasksController] exportTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error);
+        }
+    };
+
+    importTasks = async (req, res, next) => {
+        try {
+            if (!req.file) {
+                return sendError(res, 'No file uploaded', 400);
+            }
+            const results = await this.service.importTasksCsv(req.user, req.file.buffer);
+            sendSuccess(res, results, 'Tasks imported successfully');
+        } catch (error) {
+            console.error('[TasksController] importTasks Error:', error);
+            if (next) next(error);
+            else sendError(res, error.message || 'Error importing tasks', error.statusCode || 500);
+        }
+    };
 }
+
