@@ -281,20 +281,21 @@ model Contact {
 }
 
 model CallLog {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   owner_user_id String
   contact_id    String?
   caller_phone_e164 String
   caller_name   String?
-  direction     String   // "INCOMING", "OUTGOING"
-  call_time     DateTime @default(now())
+  direction     String    // "INCOMING", "OUTGOING"
+  call_time     DateTime  @default(now())
   duration_sec  Int?
   notes         String?
-  source        String   @default("MANUAL") // "MANUAL", "WEBHOOK", "IMPORT"
-  created_at    DateTime @default(now())
+  source        String    @default("MANUAL") // "MANUAL", "WEBHOOK", "IMPORT"
+  created_at    DateTime  @default(now())
+  deleted_at    DateTime?
 
-  owner         User     @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
-  contact       Contact? @relation(fields: [contact_id], references: [id])
+  owner         User      @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+  contact       Contact?  @relation(fields: [contact_id], references: [id])
   tasks         Task[]
 
   @@index([owner_user_id])
