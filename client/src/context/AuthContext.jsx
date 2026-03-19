@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
             setAuthLoading(true);
             try {
                 const { code } = codeResponse;
-                const res = await axios.post('http://localhost:4000/api/auth/google', { code });
+                const res = await axios.post('/api/auth/google', { code });
                 const { user: userData, tokens } = res.data;
                 const idToken = tokens.id_token;
 
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
 
     const refreshUser = async () => {
         try {
-            const res = await axios.get('http://localhost:4000/api/users/me');
+            const res = await axios.get('/api/users/me');
             if (res.data.success) {
                 const fresh = res.data.data;
                 setUser(fresh);

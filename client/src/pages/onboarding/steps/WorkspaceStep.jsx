@@ -18,7 +18,7 @@ export default function WorkspaceStep({ onNext }) {
         setError('');
 
         try {
-            const res = await axios.post('http://localhost:4000/api/onboarding/workspace',
+            const res = await axios.post('/api/onboarding/workspace',
                 { name: workspaceName },
                 { withCredentials: true }
             );

@@ -18,7 +18,7 @@ export default function StepWorkspace({ onNext }) {
 
         setLoading(true);
         try {
-            await axios.post('http://localhost:4000/api/onboard/workspace', {
+            await axios.post('/api/onboard/workspace', {
                 name: workspaceName
             }, { withCredentials: true });
 

@@ -122,7 +122,7 @@ export default function OnboardingWizard() {
     useEffect(() => {
         const fetchStatus = async () => {
             try {
-                const res = await axios.get('http://localhost:4000/api/onboarding/status', {
+                const res = await axios.get('/api/onboarding/status', {
                     withCredentials: true
                 });
                 if (res.data.success) {
@@ -152,7 +152,7 @@ export default function OnboardingWizard() {
             try {
                 // Persist backend step (backend counts workspace creation as step 1)
                 await axios.post(
-                    'http://localhost:4000/api/onboarding/step',
+                    '/api/onboarding/step',
                     { step: currentStep },
                     { withCredentials: true }
                 );
@@ -166,7 +166,7 @@ export default function OnboardingWizard() {
     const handleFinish = async () => {
         setFinishing(true);
         try {
-            await axios.post('http://localhost:4000/api/onboarding/complete', {}, {
+            await axios.post('/api/onboarding/complete', {}, {
                 withCredentials: true
             });
             await refreshUser();

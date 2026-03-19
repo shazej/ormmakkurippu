@@ -13,7 +13,7 @@ export default function InviteTeamStep({ onNext }) {
         // Fetch current workspace (should be the one just created)
         const fetchWorkspace = async () => {
             try {
-                const res = await axios.get('http://localhost:4000/api/workspaces/current', {
+                const res = await axios.get('/api/workspaces/current', {
                     withCredentials: true
                 });
                 if (res.data.success) {
@@ -50,7 +50,7 @@ export default function InviteTeamStep({ onNext }) {
 
         setLoading(true);
         try {
-            const res = await axios.post(`http://localhost:4000/api/workspaces/${workspaceId}/invite`, {
+            const res = await axios.post(`/api/workspaces/${workspaceId}/invite`, {
                 emails: emailList
             }, { withCredentials: true });
 
