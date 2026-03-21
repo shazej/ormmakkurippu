@@ -54,6 +54,8 @@ model User {
   group_memberships   GroupMember[]
   contacts            Contact[]
   call_logs           CallLog[]
+  call_transcripts    CallTranscript[]
+  call_analyses       CallAnalysis[]
   owned_workspaces    Workspace[]
   workspace_memberships WorkspaceMember[]
   sent_invites        WorkspaceInvite[]
@@ -337,9 +339,77 @@ model CallLog {
   contact       Contact? @relation(fields: [contact_id], references: [id])
   tasks         Task[]
 
+  transcript    CallTranscript?
+  analysis      CallAnalysis?
+
   @@index([owner_user_id])
   @@index([caller_phone_e164])
   @@map("call_logs")
+}
+
+enum TranscriptStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model CallTranscript {
+  id                 String           @id @default(uuid())
+  call_log_id        String           @unique
+  owner_user_id      String
+  status             TranscriptStatus @default(PENDING)
+  transcript_text    String?
+  error_message      String?
+  confidence         Float?
+  provider           String?
+  language           String?
+  audio_duration_sec Int?
+  completed_at       DateTime?
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+
+  call_log  CallLog       @relation(fields: [call_log_id], references: [id], onDelete: Cascade)
+  owner     User          @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+  analysis  CallAnalysis?
+
+  @@index([owner_user_id])
+  @@map("call_transcripts")
+}
+
+model CallAnalysis {
+  id                   String         @id @default(uuid())
+  call_log_id          String         @unique
+  transcript_id        String         @unique
+  owner_user_id        String
+  status               AnalysisStatus @default(PENDING)
+  key_points           Json           @default("[]")
+  action_items         Json           @default("[]")
+  decisions            Json           @default("[]")
+  follow_ups           Json           @default("[]")
+  sentiment_label      String?
+  sentiment_confidence Float?
+  sentiment_rationale  String?
+  warnings             Json           @default("[]")
+  error_message        String?
+  provider             String?
+  completed_at         DateTime?
+  created_at           DateTime       @default(now())
+  updated_at           DateTime       @updatedAt
+
+  call_log   CallLog        @relation(fields: [call_log_id], references: [id], onDelete: Cascade)
+  transcript CallTranscript @relation(fields: [transcript_id], references: [id], onDelete: Cascade)
+  owner      User           @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
+
+  @@index([owner_user_id])
+  @@map("call_analyses")
 }
 
 model Workspace {

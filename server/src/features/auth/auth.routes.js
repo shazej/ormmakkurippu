@@ -3,6 +3,7 @@ import { AuthController } from './auth.controller.js';
 import { verifyFirebaseToken } from '../../middleware/auth.js';
 import { authLimiter } from '../../middleware/rate-limit.js';
 import { DEMO_USERS, signDemoToken, upsertDemoUser } from './demo-auth.service.js';
+import { sendSuccess } from '../../utils/api-response.js';
 
 const router = express.Router();
 const controller = new AuthController();
@@ -24,8 +25,7 @@ router.post('/demo-login', authLimiter, async (req, res) => {
         }
         const user = await upsertDemoUser(email);
         const token = signDemoToken(email);
-        return res.status(200).json({
-            success: true,
+        return sendSuccess(res, {
             token,
             user: {
                 id: user.id,

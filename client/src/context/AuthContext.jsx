@@ -59,20 +59,38 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user');
             delete axios.defaults.headers.common['Authorization'];
+            // Ensure cookies are sent (for the session cookie)
+            axios.defaults.withCredentials = true;
 
             const res = await axios.post(`${API}/api/auth/demo-login`, { email });
-            const { token: newToken, user: userData } = res.data;
+            const authData = res.data?.data || res.data;
+            const { token: newToken, user: userData } = authData;
 
-            axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-            setToken(newToken);
-            localStorage.setItem('auth_token', newToken);
+            if (newToken) {
+                axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+                setToken(newToken);
+                localStorage.setItem('auth_token', newToken);
+            }
 
-            // Fetch full profile
+            // Fetch full profile (this should now work with the cookie or Bearer token)
             let profile = userData;
             try {
                 const meRes = await axios.get(`${API}/api/users/me`);
-                if (meRes.data?.success) profile = meRes.data.data;
-            } catch { /* use profile from login response */ }
+                // If the backend returns { success: true, data: { ...user } }
+                if (meRes.data?.success) {
+                    profile = meRes.data.data;
+                } else if (meRes.data?.id) {
+                    // If it returns just the user
+                    profile = meRes.data;
+                }
+            } catch (err) {
+                console.warn('[AuthContext] /api/users/me fetch failed, using userData from login', err);
+            }
+
+            console.log('[AuthContext] Final profile:', profile);
+            if (!profile) {
+                throw new Error('No user profile received');
+            }
 
             setUser(profile);
             localStorage.setItem('auth_user', JSON.stringify(profile));
@@ -98,8 +116,9 @@ export const AuthProvider = ({ children }) => {
             try {
                 const { code } = codeResponse;
                 const res = await axios.post(`${API}/api/auth/google`, { code });
-                const { user: userData, tokens } = res.data;
-                const idToken = tokens.id_token;
+                const authData = res.data?.data || res.data;
+                const { user: userData, tokens } = authData;
+                const idToken = tokens?.id_token;
 
                 axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
                 setToken(idToken);

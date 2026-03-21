@@ -26,6 +26,7 @@ import complianceRoutes from './features/compliance/compliance.routes.js';
 import usersRoutes from './features/users/users.routes.js';
 import contactsRoutes from './features/contacts/contacts.routes.js';
 import callsRoutes from './features/calls/calls.routes.js';
+import transcriptionRoutes from './features/transcription/transcription.routes.js';
 import workspacesRoutes from './features/workspaces/workspaces.routes.js';
 import groupsRoutes from './features/groups/groups.routes.js';
 import linkedAccountsRoutes from './features/linked-accounts/linked-accounts.routes.js';
@@ -170,6 +171,7 @@ const upload = multer({
 app.use('/api/users', usersRoutes);
 app.use('/api/contacts', contactsRoutes);
 app.use('/api/calls', callsRoutes);
+app.use('/api/calls', transcriptionRoutes);
 app.use('/api/workspaces', workspacesRoutes);
 
 // Reminder Loop (Simple In-Memory)
