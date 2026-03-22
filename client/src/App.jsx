@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { ProjectsProvider } from './context/ProjectsContext';
+import { NotificationsProvider } from './context/NotificationsContext';
 import MarketingLayout from './layouts/MarketingLayout';
 import AppLayout from './layouts/AppLayout';
 import LandingPage from './pages/LandingPage';
@@ -96,7 +97,9 @@ function AppRoutes() {
             <Route path="/app" element={
                 <ProtectedRoute>
                     <ProjectsProvider>
-                        <AppLayout />
+                        <NotificationsProvider>
+                            <AppLayout />
+                        </NotificationsProvider>
                     </ProjectsProvider>
                 </ProtectedRoute>
             }>

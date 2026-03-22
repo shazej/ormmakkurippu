@@ -9,6 +9,7 @@ import { Readable } from 'stream';
 
 import { maskPhone } from '../../utils/phone-utils.js';
 import { ensureTaskAccess } from './task-auth.js';
+import { notifyTaskAssigned, notifySharedTaskUpdate } from '../notifications/notification-events.js';
 
 // Expiry presets: convert human-readable durations to milliseconds
 const EXPIRY_PRESETS = {
@@ -139,7 +140,19 @@ export class TasksService {
             projectId: data.projectId || null
         };
 
-        return this.repository.create(newTask);
+        const created = await this.repository.create(newTask);
+
+        // Notify assignee if task is assigned on creation
+        if (assignedToUserId && assignedToUserId !== user.uid) {
+            notifyTaskAssigned({
+                task: created,
+                assigneeUserId: assignedToUserId,
+                assigneeEmail: data.assignedToEmail,
+                assignerName: user.name || user.email,
+            }).catch(e => console.error('[TasksService] Notification error:', e.message));
+        }
+
+        return created;
     }
 
     async updateTask(id, user, data) {
@@ -193,6 +206,12 @@ export class TasksService {
             updates.reminderSent = false;
         }
 
+        // Reset reminder_sent_at if due date changes, so new reminder can fire
+        if ((updates.dueDate !== undefined || updates.due_date !== undefined) &&
+            (updates.dueDate || updates.due_date) !== (task.due_date?.toISOString?.())) {
+            updates.reminder_sent_at = null;
+        }
+
         if (Object.keys(updates).length === 0) return task;
 
         const updatedTask = await this.repository.update(id, updates);
@@ -200,6 +219,28 @@ export class TasksService {
         // Handle Recurrence on Completion
         if (updates.status === 'Completed' && updatedTask.recurrence_rule && isOwner) {
             await this._handleRecurrence(updatedTask, user);
+        }
+
+        // Notify shared task participants about meaningful changes (non-blocking)
+        const hasCollaborator = task.assigned_to_user_id || updatedTask.assigned_to_user_id;
+        if (hasCollaborator) {
+            const changedFields = Object.keys(updates);
+            notifySharedTaskUpdate({
+                task: updatedTask,
+                actorUserId: user.uid,
+                actorName: user.name || user.email,
+                changes: changedFields,
+            }).catch(e => console.error('[TasksService] Notification error:', e.message));
+        }
+
+        // Notify on new assignment within update
+        if (updates.assigned_to_user_id && updates.assigned_to_user_id !== task.assigned_to_user_id) {
+            notifyTaskAssigned({
+                task: updatedTask,
+                assigneeUserId: updates.assigned_to_user_id,
+                assigneeEmail: data.assignedToEmail,
+                assignerName: user.name || user.email,
+            }).catch(e => console.error('[TasksService] Notification error:', e.message));
         }
 
         return updatedTask;
@@ -373,7 +414,19 @@ export class TasksService {
             }
         }
 
-        return this.repository.update(id, updates);
+        const updatedTask = await this.repository.update(id, updates);
+
+        // Fire notification for assignment (non-blocking)
+        if (updates.assigned_to_user_id) {
+            notifyTaskAssigned({
+                task: updatedTask,
+                assigneeUserId: updates.assigned_to_user_id,
+                assigneeEmail: email,
+                assignerName: user.name || user.email,
+            }).catch(e => console.error('[TasksService] Notification error:', e.message));
+        }
+
+        return updatedTask;
     }
 
     async bulkTasks(user, { action, taskIds, email }) {

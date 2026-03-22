@@ -13,6 +13,7 @@ import Sidebar from '../components/layout/Sidebar';
 import CreateTaskModal from '../components/CreateTaskModal';
 import CreateProjectModal from '../components/CreateProjectModal';
 import CreateFolderModal from '../components/CreateFolderModal';
+import NotificationBell from '../components/NotificationBell';
 
 // Mobile top bar — only shown on small screens
 function MobileTopBar({ onToggleSidebar }) {
@@ -28,9 +29,12 @@ function MobileTopBar({ onToggleSidebar }) {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
-            <span className="text-base font-bold text-gray-900">
+            <span className="text-base font-bold text-gray-900 flex-1">
                 <span className="text-red-600">ormmak</span>kurippu
             </span>
+            <div className="[&_button]:text-gray-500 [&_button]:hover:text-gray-700 [&_button]:hover:bg-gray-100">
+                <NotificationBell />
+            </div>
         </header>
     );
 }

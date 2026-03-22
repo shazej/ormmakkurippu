@@ -11,6 +11,7 @@ import {
     Users, LayoutGrid, Settings, Plus, Search, LogOut,
     ChevronDown, ChevronRight, X, FolderPlus, Hash, Folder, Database
 } from 'lucide-react';
+import NotificationBell from '../NotificationBell';
 
 function SectionLabel({ children }) {
     return (
@@ -81,6 +82,7 @@ export default function Sidebar({
                             <p className="text-[10px] text-gray-500 leading-tight">{user?.plan || 'Free Plan'}</p>
                         </div>
                     </button>
+                    <NotificationBell />
                     <button onClick={onClose} className="lg:hidden p-1 text-gray-600 hover:text-gray-300 rounded ml-1 shrink-0"><X size={15} /></button>
                 </div>
 

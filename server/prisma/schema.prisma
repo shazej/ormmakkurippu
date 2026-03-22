@@ -45,6 +45,8 @@ model User {
   sessions            Session[]
   oauth_consents      OAuthConsent[]
   notification_settings NotificationSettings?
+  notifications         Notification[]
+  notification_preference NotificationPreference?
   audit_logs          AuditLog[]
   tasks               Task[]
   assigned_tasks      Task[]    @relation("AssignedTasks")
@@ -210,6 +212,61 @@ model NotificationSettings {
   @@map("notification_settings")
 }
 
+// --- Notification System ---
+
+enum NotificationType {
+  TASK_DUE_REMINDER
+  TASK_ASSIGNED
+  SHARED_TASK_UPDATE
+  SUBSCRIPTION_ALERT
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  user_id     String
+  type        NotificationType
+  channel     NotificationChannel @default(IN_APP)
+  title       String
+  message     String
+  link_url    String?          // Frontend route to navigate to
+  entity_type String?          // e.g. "task", "subscription"
+  entity_id   String?          // ID of the related entity
+  data        Json?            // Extra metadata
+  is_read     Boolean          @default(false)
+  read_at     DateTime?
+  created_at  DateTime         @default(now())
+
+  user        User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([user_id, is_read])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                          String   @id @default(uuid())
+  user_id                     String   @unique
+  in_app_enabled              Boolean  @default(true)
+  email_enabled               Boolean  @default(false)
+  task_due_enabled            Boolean  @default(true)
+  task_assigned_enabled       Boolean  @default(true)
+  shared_task_updates_enabled Boolean  @default(true)
+  subscription_alerts_enabled Boolean  @default(true)
+  push_enabled                Boolean  @default(false) // Future
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
+
+  user                        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
 model AuditLog {
   id          String   @id @default(uuid())
   user_id     String?
@@ -257,6 +314,9 @@ model Task {
   related_contact_id  String?
   caller_phone_e164   String?   // Denormalized for display
   
+  // Reminder tracking
+  reminder_sent_at    DateTime? // Prevents duplicate due-date reminders
+
   // Recurrence
   recurrence_rule        String?   // daily, weekly, monthly
   recurrence_anchor_date DateTime?

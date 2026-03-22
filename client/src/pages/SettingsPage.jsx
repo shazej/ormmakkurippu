@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { User, Shield, Users, Save, Trash2, Clock, AlertCircle } from 'lucide-react';
+import { User, Shield, Users, Save, Trash2, Clock, AlertCircle, Bell } from 'lucide-react';
+import NotificationPreferences from '../components/NotificationPreferences';
 
 export default function SettingsPage() {
     const { user, refreshUser } = useAuth();
@@ -112,6 +113,12 @@ export default function SettingsPage() {
                     className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-2 ${activeTab === 'members' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                 >
                     <Users size={18} /> Members
+                </button>
+                <button
+                    onClick={() => setActiveTab('notifications')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-2 ${activeTab === 'notifications' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                    <Bell size={18} /> Notifications
                 </button>
             </div>
 
@@ -245,6 +252,14 @@ export default function SettingsPage() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'notifications' && (
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Notification Preferences</h3>
+                        <p className="text-sm text-gray-500 mb-6">Control which notifications you receive and how they are delivered.</p>
+                        <NotificationPreferences />
                     </div>
                 )}
             </div>

@@ -135,10 +135,37 @@ app.use(cors({
 }));
 
 // Webhook handling (raw body) - MUST be before express.json()
-app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), (req, res) => {
-    // Placeholder for Stripe Webhook
-    console.log('Stripe Webhook received');
-    res.json({ received: true });
+app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+        const payload = JSON.parse(req.body.toString());
+        console.log('Stripe Webhook received:', payload.type);
+
+        // Map Stripe events to notification events
+        const eventMap = {
+            'customer.subscription.created': 'subscription_activated',
+            'customer.subscription.deleted': 'subscription_canceled',
+            'customer.subscription.resumed': 'subscription_resumed',
+            'invoice.payment_failed': 'payment_failed',
+            'customer.subscription.trial_will_end': 'trial_ending_soon',
+            'invoice.paid': 'subscription_renewed',
+        };
+
+        const notificationEvent = eventMap[payload.type];
+        if (notificationEvent && payload.data?.object?.metadata?.user_id) {
+            const { notifySubscriptionAlert } = await import('./features/notifications/notification-events.js');
+            await notifySubscriptionAlert({
+                userId: payload.data.object.metadata.user_id,
+                userEmail: payload.data.object.metadata.user_email,
+                event: notificationEvent,
+                details: { stripeEvent: payload.type },
+            });
+        }
+
+        res.json({ received: true });
+    } catch (err) {
+        console.error('Stripe webhook error:', err.message);
+        res.json({ received: true });
+    }
 });
 
 app.use(express.json());
@@ -174,18 +201,21 @@ app.use('/api/calls', callsRoutes);
 app.use('/api/calls', transcriptionRoutes);
 app.use('/api/workspaces', workspacesRoutes);
 
-// Reminder Loop (Simple In-Memory)
-setInterval(async () => {
-    try {
-        const tasksService = new TasksService();
-        const sent = await tasksService.processReminders();
-        if (sent.length > 0) {
-            console.log(`[Reminders] Sent ${sent.length} reminders:`, sent.map(t => `${t.id} (${t.title})`));
+// Reminder Loop — processes task due reminders via notification system
+const REMINDER_INTERVAL = parseInt(process.env.NOTIFICATIONS_POLL_INTERVAL_MS || '60000', 10);
+const REMINDER_ENABLED = process.env.REMINDER_PROCESSING_ENABLED !== 'false';
+
+if (REMINDER_ENABLED) {
+    setInterval(async () => {
+        try {
+            const { ReminderProcessor } = await import('./features/notifications/reminder-processor.js');
+            const processor = new ReminderProcessor();
+            await processor.processReminders();
+        } catch (e) {
+            // Squelch to avoid noisy logs
         }
-    } catch (e) {
-        // console.error('[Reminders] Error processing:', e); // Squelch mostly
-    }
-}, 60000); // Check every 60s
+    }, REMINDER_INTERVAL);
+}
 
 // Alias for /api/users/me
 app.get('/api/me', verifyFirebaseToken, usersController.getProfile);
